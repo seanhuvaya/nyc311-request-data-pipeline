@@ -1,6 +1,24 @@
-.DS_Store
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+
+# Data
+raw/*
+processed/*
+logs/*
+
+# Airflow
+airflow.db
+*.log
+
+# Spark
+spark-warehouse/
+derby.log
+metastore_db/
+
+.env
 .idea
-**/.env
-logs
-**/__pycache__/
-data/
+.DS_store
