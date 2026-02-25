@@ -1,0 +1,11 @@
+data:
+  raw_path: ./raw
+  processed_path: ./processed
+api:
+  socrata_domain: "https://data.cityofnewyork.us/resource"
+  dataset_id: erm2-nwe9
+spark:
+  master: local[*]
+  memory: 4g
+airflow:
+  dag_schedule: '@daily'
