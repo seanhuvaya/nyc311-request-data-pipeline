@@ -8,5 +8,6 @@ dependencies = [
     "apache-airflow-providers-apache-spark>=5.5.0",
     "dotenv>=0.9.9",
     "pandas>=2.3.3",
+    "pyspark>=4.1.1",
     "urllib3>=2.6.3",
 ]

@@ -333,35 +333,5 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
-  spark-master:
-    image: apache/spark-py:latest  # Or a specific tag like 3.5.3
-    container_name: spark-master
-    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master -h spark-master
-    ports:
-      - "8082:8080"  # As per your previous change
-      - "7077:7077"
-    environment:
-      - SPARK_MASTER_HOST=spark-master
-      - SPARK_MASTER_PORT=7077
-    volumes:
-      - ./spark-apps:/opt/spark-apps
-      - ./data:/data
-
-  spark-worker:
-    image: apache/spark-py:latest
-    container_name: spark-worker
-    depends_on:
-      - spark-master
-    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
-    ports:
-      - "8081:8081"  # Or your chosen port
-    environment:
-      - SPARK_WORKER_CORES=2
-      - SPARK_WORKER_MEMORY=2g
-      - SPARK_WORKER_DIR=/tmp/spark-work  # Added: Use /tmp for writable storage
-    volumes:
-      - ./spark-apps:/opt/spark-apps
-      - ./data:/data
-
 volumes:
   postgres-db-volume:

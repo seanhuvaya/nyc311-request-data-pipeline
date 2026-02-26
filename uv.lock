@@ -1596,6 +1596,7 @@ dependencies = [
     { name = "dotenv" },
     { name = "pandas", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "pandas", version = "3.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "pyspark" },
     { name = "urllib3" },
 ]
 
@@ -1604,6 +1605,7 @@ requires-dist = [
     { name = "apache-airflow-providers-apache-spark", specifier = ">=5.5.0" },
     { name = "dotenv", specifier = ">=0.9.9" },
     { name = "pandas", specifier = ">=2.3.3" },
+    { name = "pyspark", specifier = ">=4.1.1" },
     { name = "urllib3", specifier = ">=2.6.3" },
 ]
 

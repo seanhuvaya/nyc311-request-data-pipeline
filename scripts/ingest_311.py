@@ -2,7 +2,7 @@ import os
 import sys
 import pandas as pd
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from requests import Session
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
@@ -59,7 +59,6 @@ class NYC311Client:
         after the end of that day. If you want to include the day or use a precise timestamp, adjust accordingly.
         """
         all_records = []
-        # Adjust to > end of the day for "after" the date
         where_clause = f"created_date > '{last_update_date}T00:00:00.000'"
 
         while True:
@@ -83,10 +82,10 @@ class NYC311Client:
 def ingest():
     yesterday = (date.today() - timedelta(days=1)).strftime("%Y-%m-%d")
     complaints = NYC311Client().fetch_all_complaints(yesterday)
-    complaints_df = pd.DataFrame.from_dict(complaints)
+    complaints_df = pd.DataFrame(complaints)
 
     raw_data_path = yml_config.config['data']['raw_path']
-    raw_file_path = os.path.join(raw_data_path, f'nyc311_raw_{datetime.utcnow().timestamp()}.csv')
+    raw_file_path = os.path.join(raw_data_path, f'nyc311_raw_{datetime.now(timezone.utc).timestamp()}.csv')
 
     complaints_df.to_csv(raw_file_path, index=False)
 
