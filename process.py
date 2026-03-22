@@ -5,8 +5,6 @@ from pyspark.sql.functions import col, to_timestamp, coalesce, when, current_tim
     dayofmonth, hour, year, month
 from pyspark.sql.types import IntegerType, FloatType
 
-from utils.config import yml_config
-
 
 def clean_and_validate_data(df: DataFrame) -> DataFrame:
     # Parse Timestamps
