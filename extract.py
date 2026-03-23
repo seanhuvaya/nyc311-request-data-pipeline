@@ -1,4 +1,3 @@
-import io
 import logging
 from datetime import datetime, timedelta
 from io import StringIO
@@ -7,9 +6,9 @@ from typing import List
 import boto3
 import pandas as pd
 import requests
-from jinja2.bccache import Bucket
 
 from constants import DATA_BASE_URL, NYC_311_DATASET
+from validate import perform_validation
 
 logger = logging.getLogger(__name__)
 
@@ -82,4 +81,6 @@ if __name__ == "__main__":
     records = fetch_all_311_requests(last_update_date_example)
 
     df = pd.DataFrame(records)
+    perform_validation(df, "extract")
     upload_raw_data_to_s3(df)
+
