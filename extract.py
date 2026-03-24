@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timedelta, timezone
-from io import StringIO
+from io import StringIO, BytesIO
 from typing import Tuple
 
 import boto3
@@ -97,20 +97,29 @@ def fetch_all_311_requests(last_update_date: str, limit: int = 1000, offset: int
 
 def upload_raw_data_to_s3(df: pd.DataFrame, extraction_id: int) -> None:
     logger.info(f"Uploading raw data to s3...")
-    buffer = StringIO()
-    df.to_csv(buffer, index=False)
+    buffer = BytesIO()
+    df.to_parquet(
+        buffer,
+        engine='pyarrow',  # Important: fastparquet often fails with BytesIO
+        compression='snappy',  # Excellent compression + Spark loves it
+        index=False
+    )
 
     last_created_record_date = pd.to_datetime(df['created_date']).max()
-    file_key = f"raw/date={last_created_record_date.strftime('%Y-%m-%d')}/{settings.AWS_S3_RAW_DATA_CSV_FILENAME}"
+    file_key = f"raw/date={last_created_record_date.strftime('%Y-%m-%d')}/{settings.AWS_S3_RAW_DATA_PARQUET_FILENAME}"
 
     s3_client = boto3.client("s3")
     s3_client.put_object(
         Bucket=settings.AWS_S3_BUCKET,
         Key=file_key,
         Body=buffer.getvalue(),
-        ContentType="text/csv",
+        ContentType="application/octet-stream",
+        Metadata={
+            "load_date": datetime.now(timezone.utc).strftime('%Y-%m-%d'),
+            "row_count": str(len(df)),
+        }
     )
-    logger.info(f"Raw CSV successfully saved to s3: s3://{settings.AWS_S3_BUCKET}/{file_key}")
+    logger.info(f"Successfully uploaded parquet to s3://{settings.AWS_S3_BUCKET}/{file_key}")
 
     log_extraction_end(extraction_id, ExtractionStatus.COMPLETED.value, num_records=len(df),
                        latest_record_created_date=last_created_record_date)
