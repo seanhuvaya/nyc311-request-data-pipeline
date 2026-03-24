@@ -1,11 +1,12 @@
 import logging
 
-from dotenv import load_dotenv
 from pyspark.sql import SparkSession
 
+from config import settings
+from db import get_db_session
+from models import ExtractMetadata
+from models.extraction_metadata import ExtractionStatus
 from validate import perform_validation
-
-load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,19 @@ cols_to_drop = ["vehicle_type", "descriptor_2", "taxi_pick_up_location", "bridge
 
 
 def transform_data():
+    raw_data_csv_file_paths = []
+    with (get_db_session() as session):
+        extraction_metadata = session.query(ExtractMetadata).where(
+            ExtractMetadata.status == ExtractionStatus.COMPLETED.value).all()
+        latest_record_created_dates = [record.latest_record_created_date.strftime('%Y-%m-%d') for record in
+                                       extraction_metadata]
+
+        raw_data_csv_file_paths = [f"s3a://{settings.AWS_S3_BUCKET}/raw/date={date}/{settings.AWS_S3_RAW_DATA_CSV_FILENAME}"
+                                   for date in latest_record_created_dates]
+
+    root_raw_data_csv_file_paths = ['/'.join(p.split('/')[:-1]) for p in raw_data_csv_file_paths]
+    print(root_raw_data_csv_file_paths)
+
     spark = SparkSession.builder \
         .appName("Read S3 File") \
         .master("local[*]") \
@@ -25,9 +39,13 @@ def transform_data():
 
     spark.sparkContext.setLogLevel("WARN")
 
-    s3_path = "s3a://nyc311-requests-data/raw/nyc311-requests-data_2026-03-21_02:24:50.csv"
+    df = spark.read \
+        .format("csv") \
+        .option("header", "true") \
+        .option("inferSchema", "true") \
+        .option("pathGlobFilter", "*.csv") \
+        .load(root_raw_data_csv_file_paths)
 
-    df = spark.read.csv(s3_path, header=True, inferSchema=True)
 
     df_clean = df.drop(*cols_to_drop)
     logger.info(f"Dropped {len(cols_to_drop)} columns.")
@@ -38,8 +56,10 @@ def transform_data():
 
     return df_pandas
 
+
 if __name__ == "__main__":
     from logger import setup_logging
+
     setup_logging()
     df_cleaned = transform_data()
     perform_validation(df_cleaned, "transform")

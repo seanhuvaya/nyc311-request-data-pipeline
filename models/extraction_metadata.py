@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, Integer, DateTime, String, Enum, BigInteger
+from sqlalchemy import Column, Integer, DateTime, String
 from sqlalchemy.dialects.postgresql import JSONB
 
 from models.base import Base
@@ -12,6 +12,7 @@ class ExtractionStatus(enum.Enum):
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
     INITIATED = "INITIATED"
+    TRANSFORMED = "TRANSFORMED"
 
 
 class ExtractMetadata(Base):
@@ -25,10 +26,6 @@ class ExtractMetadata(Base):
 
     num_records_pulled = Column(Integer, nullable=False, default=0)
     latest_record_created_date = Column(DateTime(timezone=True))
-
-    data_file_path = Column(String)
-    data_file_size_in_bytes = Column(BigInteger)
-    data_file_checksum = Column(String(64))
 
     error_message = Column(String)
     parameters = Column(JSONB)

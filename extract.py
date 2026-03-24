@@ -1,14 +1,13 @@
 import logging
 from datetime import datetime, timedelta, timezone
 from io import StringIO
-from typing import List, Tuple
+from typing import Tuple
 
 import boto3
 import pandas as pd
 import requests
-from airflow.jobs.triggerer_job_runner import messages
 
-from constants import DATA_BASE_URL, NYC_311_DATASET
+from config import settings
 from db import get_db_session
 from models import ExtractMetadata
 from models.extraction_metadata import ExtractionStatus
@@ -35,8 +34,6 @@ def log_extraction_end(extraction_id: int,
                        status: str,
                        num_records: int = 0,
                        latest_record_created_date=None,
-                       data_file_path: str = None,
-                       data_file_size_in_bytes: int = None,
                        error_message: str = None) -> None:
     with get_db_session() as session:
         record = session.get(ExtractMetadata, extraction_id)
@@ -50,8 +47,6 @@ def log_extraction_end(extraction_id: int,
         record.status = status
         record.num_records_pulled = num_records
         record.latest_record_created_date = latest_record_created_date
-        record.data_file_path = data_file_path
-        record.data_file_size_in_bytes = data_file_size_in_bytes
         record.error_message = error_message
 
         logger.info(f"Extraction: {record.id} finished with status `{status}`")
@@ -70,18 +65,17 @@ def fetch_all_311_requests(last_update_date: str, limit: int = 1000, offset: int
     extraction_id = log_extraction_start(params)
 
     try:
-        url = DATA_BASE_URL + f"/{NYC_311_DATASET}"
-        logger.info(f"Fetching data: GET {url}")
+        logger.info(f"Fetching data: GET {settings.DATASET_URL}")
 
         while True:
-            response = requests.get(url, params=params)
+            response = requests.get(settings.DATASET_URL, params=params)
 
             if not response.ok:
                 error_message = response.json()['message']
                 log_extraction_end(extraction_id=extraction_id, status=ExtractionStatus.FAILED.value,
                                    error_message=error_message)
                 raise Exception(
-                    f"GET {NYC_311_DATASET} failed [{response.status_code}]: {error_message}"
+                    f"GET {settings.DATASET_URL.split('/')[-1]} failed [{response.status_code}]: {error_message}"
                 )
 
             response_data = response.json()
@@ -107,21 +101,19 @@ def upload_raw_data_to_s3(df: pd.DataFrame, extraction_id: int) -> None:
     df.to_csv(buffer, index=False)
 
     last_created_record_date = pd.to_datetime(df['created_date']).max()
-    bucket = "nyc311-requests-data"
-    file_key = f"raw/nyc311-requests-data_{last_created_record_date.strftime('%Y-%m-%d %H:%M:%S').replace(' ', '_')}.csv"
+    file_key = f"raw/date={last_created_record_date.strftime('%Y-%m-%d')}/{settings.AWS_S3_RAW_DATA_CSV_FILENAME}"
 
     s3_client = boto3.client("s3")
     s3_client.put_object(
-        Bucket=bucket,
+        Bucket=settings.AWS_S3_BUCKET,
         Key=file_key,
         Body=buffer.getvalue(),
         ContentType="text/csv",
     )
-    logger.info(f"Raw CSV successfully saved to s3: s3://{bucket}/{file_key}")
+    logger.info(f"Raw CSV successfully saved to s3: s3://{settings.AWS_S3_BUCKET}/{file_key}")
 
     log_extraction_end(extraction_id, ExtractionStatus.COMPLETED.value, num_records=len(df),
-                       latest_record_created_date=last_created_record_date, data_file_path=file_key,
-                       data_file_size_in_bytes=len(buffer.getvalue().encode('utf-8')))
+                       latest_record_created_date=last_created_record_date)
 
 
 def extract_nyc311_requests():
@@ -145,4 +137,7 @@ def extract_nyc311_requests():
 
 
 if __name__ == "__main__":
+    from logger import setup_logging
+
+    setup_logging()
     extract_nyc311_requests()
