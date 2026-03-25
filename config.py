@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     AWS_ACCESS_KEY_ID: str
     AWS_SECRET_ACCESS_KEY: str
     AWS_S3_BUCKET: str
-    AWS_S3_RAW_DATA_PARQUET_FILENAME: str
+    AWS_S3_DATA_PARQUET_FILENAME: str
 
     PG_HOST: str
     PG_PORT: int

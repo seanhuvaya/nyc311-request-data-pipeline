@@ -96,7 +96,7 @@ def fetch_all_311_requests(last_update_date: str, limit: int = 1000, offset: int
 
 def upload_raw_data_to_s3(df: pd.DataFrame, extraction_id: int) -> None:
     last_created_record_date = pd.to_datetime(df['created_date']).max()
-    file_key = f"raw/date={last_created_record_date.strftime('%Y-%m-%d')}/{settings.AWS_S3_RAW_DATA_PARQUET_FILENAME}"
+    file_key = f"raw/date={last_created_record_date.strftime('%Y-%m-%d')}/{settings.AWS_S3_DATA_PARQUET_FILENAME}"
 
     upload_data_to_s3(df, settings.AWS_S3_BUCKET, file_key)
 

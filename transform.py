@@ -7,6 +7,7 @@ from config import settings
 from db import get_db_session
 from models import ExtractMetadata
 from models.extraction_metadata import ExtractionStatus
+from utils import upload_data_to_s3
 from validate import perform_validation
 
 logger = logging.getLogger(__name__)
@@ -303,7 +304,7 @@ def transform_data():
                                        extraction_metadata]
 
         raw_data_csv_file_paths = [
-            f"s3a://{settings.AWS_S3_BUCKET}/raw/date={date}/{settings.AWS_S3_RAW_DATA_PARQUET_FILENAME}"
+            f"s3a://{settings.AWS_S3_BUCKET}/raw/date={date}/{settings.AWS_S3_DATA_PARQUET_FILENAME}"
             for date in latest_record_created_dates]
 
     root_raw_data_csv_file_paths = list(set(['/'.join(p.split('/')[:-1]) for p in raw_data_csv_file_paths]))
@@ -333,6 +334,13 @@ def transform_data():
     df_pandas = df_imputed.toPandas()
 
     spark.stop()
+
+    perform_validation(df_pandas, "transform")
+
+    latest_record_created_date = df_pandas['created_date'].max()
+    file_key = f"silver/date={latest_record_created_date.strftime('%Y-%m-%d')}/{settings.AWS_S3_DATA_PARQUET_FILENAME}"
+
+    upload_data_to_s3(df_pandas, settings.AWS_S3_BUCKET, file_key)
 
     return df_pandas
 
