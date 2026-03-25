@@ -25,27 +25,26 @@ def transform_data():
         latest_record_created_dates = [record.latest_record_created_date.strftime('%Y-%m-%d') for record in
                                        extraction_metadata]
 
-        raw_data_csv_file_paths = [f"s3a://{settings.AWS_S3_BUCKET}/raw/date={date}/{settings.AWS_S3_RAW_DATA_CSV_FILENAME}"
-                                   for date in latest_record_created_dates]
+        raw_data_csv_file_paths = [
+            f"s3a://{settings.AWS_S3_BUCKET}/raw/date={date}/{settings.AWS_S3_RAW_DATA_PARQUET_FILENAME}"
+            for date in latest_record_created_dates]
 
-    root_raw_data_csv_file_paths = ['/'.join(p.split('/')[:-1]) for p in raw_data_csv_file_paths]
+    root_raw_data_csv_file_paths = list(set(['/'.join(p.split('/')[:-1]) for p in raw_data_csv_file_paths]))
     print(root_raw_data_csv_file_paths)
 
     spark = SparkSession.builder \
         .appName("Read S3 File") \
         .master("local[*]") \
-        .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:3.4.0") \
+        .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:3.4.1,org.apache.hadoop:hadoop-common:3.4.1") \
         .getOrCreate()
 
     spark.sparkContext.setLogLevel("WARN")
 
     df = spark.read \
-        .format("csv") \
-        .option("header", "true") \
-        .option("inferSchema", "true") \
-        .option("pathGlobFilter", "*.csv") \
+        .format("parquet") \
+        .option("recursiveFileLookup", "true") \
+        .option("pathGlobFilter", "*.parquet") \
         .load(root_raw_data_csv_file_paths)
-
 
     df_clean = df.drop(*cols_to_drop)
     logger.info(f"Dropped {len(cols_to_drop)} columns.")

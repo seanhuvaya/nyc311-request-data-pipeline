@@ -100,10 +100,12 @@ def upload_raw_data_to_s3(df: pd.DataFrame, extraction_id: int) -> None:
     buffer = BytesIO()
     df.to_parquet(
         buffer,
-        engine='pyarrow',  # Important: fastparquet often fails with BytesIO
-        compression='snappy',  # Excellent compression + Spark loves it
+        engine="pyarrow",
+        compression="snappy",
         index=False
     )
+
+    buffer.seek(0)
 
     last_created_record_date = pd.to_datetime(df['created_date']).max()
     file_key = f"raw/date={last_created_record_date.strftime('%Y-%m-%d')}/{settings.AWS_S3_RAW_DATA_PARQUET_FILENAME}"
