@@ -33,7 +33,7 @@ def transform_data():
     print(root_raw_data_csv_file_paths)
 
     spark = SparkSession.builder \
-        .appName("Read S3 File") \
+        .appName("Transform NYC311 Service Requests Data") \
         .master("local[*]") \
         .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:3.4.1,org.apache.hadoop:hadoop-common:3.4.1") \
         .getOrCreate()
