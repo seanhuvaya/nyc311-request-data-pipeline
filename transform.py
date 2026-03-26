@@ -1,7 +1,8 @@
 import logging
 
 from pyspark.sql import SparkSession, Window, DataFrame
-from pyspark.sql.functions import when, col, first, to_timestamp, lit, avg, trim
+from pyspark.sql.functions import when, col, first, to_timestamp, lit, avg
+from pyspark.sql.types import FloatType, IntegerType, DoubleType
 
 from config import settings
 from db import get_db_session
@@ -25,15 +26,6 @@ def handle_missing_values(df: DataFrame) -> DataFrame:
 
     df_clean = df.drop(*cols_to_drop)
     logger.info(f"Dropped {len(cols_to_drop)} columns.")
-
-    # Normalize types first
-    df_clean = (
-        df_clean
-        .withColumn("latitude", col("latitude").cast("double"))
-        .withColumn("longitude", col("longitude").cast("double"))
-        .withColumn("incident_zip", trim(col("incident_zip")))
-        .withColumn("community_board", trim(col("community_board")))
-    )
 
     # Keep business meaning of closed_date nulls
     df_with_closed_flag = df_clean.withColumn(
@@ -167,14 +159,14 @@ def handle_missing_values(df: DataFrame) -> DataFrame:
             "latitude",
             when(
                 col("lat_orig").isNull() | col("lon_orig").isNull(),
-                lit(None).cast("double")
+                lit(None).cast(DoubleType())
             ).otherwise(col("lat_orig"))
         )
         .withColumn(
             "longitude",
             when(
                 col("lat_orig").isNull() | col("lon_orig").isNull(),
-                lit(None).cast("double")
+                lit(None).cast(DoubleType())
             ).otherwise(col("lon_orig"))
         )
         .drop("lat_orig", "lon_orig")
@@ -234,7 +226,7 @@ def handle_missing_values(df: DataFrame) -> DataFrame:
             ).when(
                 col("c.cb_latitude").isNotNull() & col("c.cb_longitude").isNotNull(),
                 col("c.cb_latitude")
-            ).otherwise(lit(None).cast("double"))
+            ).otherwise(lit(None).cast(DoubleType()))
         )
         .withColumn(
             "longitude_imputed",
@@ -247,7 +239,7 @@ def handle_missing_values(df: DataFrame) -> DataFrame:
             ).when(
                 col("c.cb_latitude").isNotNull() & col("c.cb_longitude").isNotNull(),
                 col("c.cb_longitude")
-            ).otherwise(lit(None).cast("double"))
+            ).otherwise(lit(None).cast(DoubleType()))
         )
         .withColumn(
             "coord_imputation_source",
@@ -295,59 +287,71 @@ def handle_missing_values(df: DataFrame) -> DataFrame:
     return df_final
 
 
-def transform_data():
-    raw_data_csv_file_paths = []
-    with (get_db_session() as session):
+def convert_data_types(df: DataFrame) -> DataFrame:
+    return df \
+        .withColumn("created_date", to_timestamp("created_date", "yyyy-MM-dd'T'HH:mm:ss.SSS")) \
+        .withColumn("closed_date", to_timestamp("closed_date", "yyyy-MM-dd'T'HH:mm:ss.SSS")) \
+        .withColumn("latitude", col("latitude").cast(FloatType())) \
+        .withColumn("longitude", col("longitude").cast(FloatType())) \
+        .withColumn("unique_key", col('unique_key').cast(IntegerType())) \
+        .withColumn("incident_zip", col('incident_zip').cast(IntegerType()))
+
+
+def get_untransformed_data_file_paths():
+    with get_db_session() as session:
         extraction_metadata = session.query(ExtractMetadata).where(
             ExtractMetadata.status == ExtractionStatus.COMPLETED.value).all()
         latest_record_created_dates = [record.latest_record_created_date.strftime('%Y-%m-%d') for record in
                                        extraction_metadata]
 
-        raw_data_csv_file_paths = [
-            f"s3a://{settings.AWS_S3_BUCKET}/raw/date={date}/{settings.AWS_S3_DATA_PARQUET_FILENAME}"
-            for date in latest_record_created_dates]
+    return [
+        f"s3a://{settings.AWS_S3_BUCKET}/raw/date={date}/{settings.AWS_S3_DATA_PARQUET_FILENAME}"
+        for date in latest_record_created_dates
+    ]
 
-    root_raw_data_csv_file_paths = list(set(['/'.join(p.split('/')[:-1]) for p in raw_data_csv_file_paths]))
 
+def transform_dataframe(df: DataFrame) -> DataFrame:
+    df = convert_data_types(df)
+    df = handle_missing_values(df)
+    return df
+
+
+def process_raw_to_silver():
     spark = SparkSession.builder \
         .appName("Transform NYC311 Service Requests Data") \
         .master("local[*]") \
         .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:3.4.1,org.apache.hadoop:hadoop-common:3.4.1") \
         .getOrCreate()
 
-    spark.sparkContext.setLogLevel("WARN")
+    with get_db_session() as session:
+        extraction_metadata_records = session.query(ExtractMetadata) \
+            .where(ExtractMetadata.status.in_([ExtractionStatus.COMPLETED.value])) \
+            .all()
 
-    df = spark.read \
-        .format("parquet") \
-        .option("recursiveFileLookup", "true") \
-        .option("pathGlobFilter", "*.parquet") \
-        .load(root_raw_data_csv_file_paths)
+        for extraction_metadata_record in extraction_metadata_records:
+            latest_record_created_date = extraction_metadata_record.latest_record_created_date.strftime('%Y-%m-%d')
+            file_path = f"s3a://{settings.AWS_S3_BUCKET}/raw/date={latest_record_created_date}/{settings.AWS_S3_DATA_PARQUET_FILENAME}"
 
-    df_data_type_casted = df \
-        .withColumn("created_date", to_timestamp("created_date", "yyyy-MM-dd'T'HH:mm:ss.SSS")) \
-        .withColumn("closed_date", to_timestamp("closed_date", "yyyy-MM-dd'T'HH:mm:ss.SSS")) \
-        .withColumn("latitude", col("latitude").cast("float")) \
-        .withColumn("longitude", col("longitude").cast("float"))
+            df = spark.read.format("parquet").load(file_path)
 
-    df_imputed = handle_missing_values(df_data_type_casted)
+            df_transformed = transform_dataframe(df)
 
-    df_pandas = df_imputed.toPandas()
+            df_pandas = df_transformed.toPandas()
 
-    spark.stop()
+            perform_validation(df_pandas, "transform")
 
-    perform_validation(df_pandas, "transform")
+            latest_record_created_date = df_pandas['created_date'].max()
+            file_key = f"silver/date={latest_record_created_date.strftime('%Y-%m-%d')}/{settings.AWS_S3_DATA_PARQUET_FILENAME}"
 
-    latest_record_created_date = df_pandas['created_date'].max()
-    file_key = f"silver/date={latest_record_created_date.strftime('%Y-%m-%d')}/{settings.AWS_S3_DATA_PARQUET_FILENAME}"
+            upload_data_to_s3(df_pandas, settings.AWS_S3_BUCKET, file_key)
 
-    upload_data_to_s3(df_pandas, settings.AWS_S3_BUCKET, file_key)
+            extraction_metadata_record.status = ExtractionStatus.PROCESSED.value
 
-    return df_pandas
+            session.flush()
 
 
 if __name__ == "__main__":
     from logger import setup_logging
 
     setup_logging()
-    df_cleaned = transform_data()
-    perform_validation(df_cleaned, "transform")
+    process_raw_to_silver()

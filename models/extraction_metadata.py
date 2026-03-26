@@ -12,7 +12,7 @@ class ExtractionStatus(enum.Enum):
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
     INITIATED = "INITIATED"
-    TRANSFORMED = "TRANSFORMED"
+    PROCESSED = "PROCESSED"
 
 
 class ExtractMetadata(Base):
