@@ -3,8 +3,8 @@ import logging
 from typing import Optional
 
 from db import get_db_session
-from models import ExtractMetadata
-from models.extraction_metadata import ExtractionStatus
+from db.models import ExtractMetadata
+from db.models.extraction_metadata import ExtractionStatus
 
 logger = logging.getLogger(__name__)
 

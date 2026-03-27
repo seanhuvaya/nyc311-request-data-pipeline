@@ -6,7 +6,7 @@ import requests
 
 from config import settings
 from metadata import log_extraction_start, log_extraction_end
-from models.extraction_metadata import ExtractionStatus
+from db.models.extraction_metadata import ExtractionStatus
 
 logger = logging.getLogger(__name__)
 

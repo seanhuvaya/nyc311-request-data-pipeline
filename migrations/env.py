@@ -1,11 +1,11 @@
-import os
 from logging.config import fileConfig
 
+from alembic import context
 from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, URL
 from sqlalchemy import pool
 
-from alembic import context
+from src.utils.config import settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -20,7 +20,8 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-from models import *
+from src.db.models import *
+
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
@@ -32,11 +33,11 @@ load_dotenv()
 
 db_url = URL.create(
     drivername="postgresql+psycopg2",
-    host=os.environ.get("PG_HOST", "localhost"),
-    port=os.environ.get("PG_PORT", 5432),
-    username=os.environ.get("PG_USER", "postgres"),
-    password=os.environ.get("PG_PASSWORD", ""),
-    database=os.environ.get("PG_DATABASE", "postgres"),
+    host=settings.PG_HOST,
+    port=settings.PG_PORT,
+    username=settings.PG_USER,
+    password=settings.PG_PASSWORD,
+    database=settings.PG_DATABASE,
 )
 
 config.set_main_option("sqlalchemy.url", db_url.render_as_string(hide_password=False))

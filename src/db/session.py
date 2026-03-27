@@ -1,19 +1,11 @@
-import os
 from contextlib import contextmanager
 
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-load_dotenv()
+from src.utils.config import settings
 
-db_user = os.environ.get('PG_USER', 'postgres')
-db_password = os.environ.get('PG_PASSWORD', '')
-db_host = os.environ.get('PG_HOST', 'localhost')
-db_port = os.environ.get('PG_PORT', '5432')
-db_name = os.environ.get('PG_DATABASE', 'postgres')
-
-database_url = f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+database_url = f"postgresql+psycopg2://{settings.PG_USER}:{settings.PG_PASSWORD}@{settings.PG_HOST}:{settings.PG_PORT}/{settings.PG_DATABASE}"
 
 engine = create_engine(database_url, echo=False)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

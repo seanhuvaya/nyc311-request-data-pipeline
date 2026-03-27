@@ -8,6 +8,27 @@ logger = logging.getLogger(__name__)
 
 random.seed(42)
 
+
+def perform_spark_validation_sample(
+    df,
+    stage_name: str,
+    sample_size: int = 10_000,
+) -> None:
+    """Run the same EDA checks on a sampled subset without collecting the full DataFrame."""
+    from pyspark.sql import DataFrame as SparkDataFrame
+
+    if not isinstance(df, SparkDataFrame):
+        raise TypeError("perform_spark_validation_sample expects a PySpark DataFrame")
+
+    n = df.count()
+    if n == 0:
+        logger.info("Skipping Spark validation for %s: empty DataFrame", stage_name)
+        return
+    fraction = min(1.0, sample_size / max(n, 1))
+    pdf = df.sample(False, fraction, seed=42).limit(sample_size).toPandas()
+    perform_validation(pdf, stage_name, sample_size=len(pdf))
+
+
 def perform_validation(df: pd.DataFrame, stage_name: str, sample_size: int = 10_000):
     start = datetime.now()
     logger.info(f"Starting EDA for stage: {stage_name} | Shape: {df.shape if hasattr(df, 'shape') else 'N/A'}")

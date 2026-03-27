@@ -1,8 +1,9 @@
 import logging
-from datetime import datetime
 
-from date_utils import format_date_for_api, get_latest_record_created_date
+from utils.date_utils import format_date_for_api, get_latest_record_created_date
 from extractor import fetch_all_311_requests
+from metadata import log_extraction_end
+from db.models.extraction_metadata import ExtractionStatus
 from uploader import upload_raw_data_to_s3
 from validate import perform_validation
 
@@ -19,8 +20,15 @@ def extract_nyc311_requests() -> None:
 
         raw_df, extraction_id = fetch_all_311_requests(api_date_str)
 
-        # Validation step (assumes it raises on failure)
-        perform_validation(raw_df, "extract")
+        try:
+            perform_validation(raw_df, "extract")
+        except Exception as e:
+            log_extraction_end(
+                extraction_id=extraction_id,
+                status=ExtractionStatus.FAILED.value,
+                error_message=f"Post-fetch validation failed: {e}",
+            )
+            raise
 
         upload_raw_data_to_s3(raw_df, extraction_id)
 
@@ -33,7 +41,7 @@ def extract_nyc311_requests() -> None:
 
 
 if __name__ == "__main__":
-    from logger import setup_logging
+    from utils.logger import setup_logging
 
     setup_logging()
     extract_nyc311_requests()

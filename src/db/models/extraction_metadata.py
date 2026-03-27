@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, DateTime, String
 from sqlalchemy.dialects.postgresql import JSONB
 
-from models.base import Base
+from src.db.models import Base
 
 
 class ExtractionStatus(enum.Enum):

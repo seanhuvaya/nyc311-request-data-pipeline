@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 from db import get_db_session
-from models import ExtractMetadata
+from db.models import ExtractMetadata
 
 
 def get_latest_record_created_date() -> datetime:
