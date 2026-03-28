@@ -4,7 +4,7 @@ from typing import List
 from utils.config import settings
 from db import get_db_session
 from db.models import ExtractMetadata
-from db.models.extraction_metadata import ExtractionStatus
+from db.models.ingestion_metadata import ExtractionStatus
 
 
 @dataclass(frozen=True)

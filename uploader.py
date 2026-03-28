@@ -4,7 +4,7 @@ import pandas as pd
 
 from config import settings
 from metadata import log_extraction_end
-from db.models.extraction_metadata import ExtractionStatus
+from db.models.ingestion_metadata import ExtractionStatus
 from utils import upload_data_to_s3
 
 logger = logging.getLogger(__name__)
