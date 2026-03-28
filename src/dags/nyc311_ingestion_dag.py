@@ -3,6 +3,8 @@ from datetime import datetime, timezone, timedelta
 
 from airflow.sdk import dag, task
 
+from src.db.models import PipelineStepRun
+from src.pipeline.pipeline_logger import save_pipeline_step_run
 from src.extract.metadata import save_ingestion_metadata
 from src.extract.client import NYC311ServiceRequestsClient
 from src.extract.metadata import get_latest_record_created_date
@@ -74,17 +76,32 @@ def nyc311_ingestion():
 
     @task()
     def log_pipeline_run_step(result: dict, **context):
-        conf = context["dag_run"].conf
-        pipeline_run_id = conf["pipeline_run_id"]
+        dag_run = context["dag_run"]
+        started_at = dag_run.start_date
+        pipeline_run_id = dag_run.conf["pipeline_run_id"]
+        dag_id = context["dag"].dag_id
 
         logger.info(f"Logging ingestion metadata for pipeline_run: {pipeline_run_id}")
+
+        pipeline_step_run = PipelineStepRun(
+            pipeline_run_id=pipeline_run_id,
+            dag_id=dag_id,
+            step_name="extract",
+            status="success",
+            started_at=started_at,
+            finished_at=datetime.now(timezone.utc),
+            num_records_in=result["row_count"],
+            num_records_out=result["row_count"]
+        )
+
+        save_pipeline_step_run(pipeline_step_run)
 
         return result
 
     start_date = determine_start_date()
     upload_result = extract_and_upload_to_s3(start_date)
-    log_result = log_pipeline_run_step(upload_result)
     ingestion_metadata_id = log_ingestion_metadata(upload_result)
+    log_result = log_pipeline_run_step(upload_result)
 
     start_date >> upload_result >> (ingestion_metadata_id, log_result)
 

@@ -16,6 +16,6 @@ class PipelineStepRun(Base):
     finished_at = Column(DateTime, nullable=False)
     num_records_in = Column(Integer, nullable=False)
     num_records_out = Column(Integer, nullable=False)
-    error_message = Column(String, nullable=False)
+    error_message = Column(String)
 
     pipeline_run = relationship("PipelineRun", back_populates="pipeline_step_runs")
