@@ -8,8 +8,7 @@ from src.db.models import Base
 
 
 class ExtractionStatus(enum.Enum):
-    PENDING = "PENDING"
-    COMPLETED = "COMPLETED"
+    SUCCESS = "SUCCESS"
     FAILED = "FAILED"
     INITIATED = "INITIATED"
     PROCESSED = "PROCESSED"
@@ -22,7 +21,7 @@ class ExtractMetadata(Base):
     extraction_started_at = Column(DateTime(timezone=True), nullable=False, default=datetime.now(timezone.utc))
     extraction_completed_at = Column(DateTime(timezone=True))
 
-    status = Column(String(20), default=ExtractionStatus.PENDING.value)
+    status = Column(String(20), default=ExtractionStatus.INITIATED.value)
 
     num_records_pulled = Column(Integer, nullable=False, default=0)
     latest_record_created_date = Column(DateTime(timezone=True))

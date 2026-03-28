@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "alembic>=1.18.4",
-    "apache-airflow-providers-apache-spark>=5.5.0",
+    "apache-airflow>=3.1.8",
     "boto3>=1.42.73",
     "boto3-stubs~=1.42.73",
     "dotenv>=0.9.9",
@@ -16,6 +16,7 @@ dependencies = [
     "pyarrow>=23.0.1",
     "pydantic-settings>=2.13.1",
     "pyspark>=4.1.1",
+    "requests>=2.33.0",
     "sqlalchemy>=2.0.47",
     "tqdm>=4.67.3",
     "urllib3>=2.6.3",

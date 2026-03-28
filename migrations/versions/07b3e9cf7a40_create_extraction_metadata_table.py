@@ -1,8 +1,8 @@
-"""create extraction_metadata table
+"""Create extraction_metadata table
 
-Revision ID: 4478cb7826d7
+Revision ID: 07b3e9cf7a40
 Revises: 
-Create Date: 2026-03-24 15:14:33.804708
+Create Date: 2026-03-28 11:04:10.484089
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '4478cb7826d7'
+revision: str = '07b3e9cf7a40'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -24,12 +24,10 @@ def upgrade() -> None:
     op.create_table('extraction_metadata',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('extraction_started_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('extraction_completed_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('extraction_completed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('status', sa.String(length=20), nullable=True),
     sa.Column('num_records_pulled', sa.Integer(), nullable=False),
     sa.Column('latest_record_created_date', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('data_file_path', sa.String(), nullable=False),
-    sa.Column('data_file_size_in_bytes', sa.BigInteger(), nullable=True),
-    sa.Column('data_file_checksum', sa.String(length=64), nullable=False),
     sa.Column('error_message', sa.String(), nullable=True),
     sa.Column('parameters', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.PrimaryKeyConstraint('id')

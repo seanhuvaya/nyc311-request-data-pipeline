@@ -1,0 +1,13 @@
+# Your project's direct dependencies only
+pydantic-settings>=2.0.0
+pydantic>=2.5.0
+requests
+sqlalchemy
+psycopg2-binary
+pandas
+pyarrow
+boto3
+python-dotenv
+# Add any others your src/ uses (e.g. pyspark if needed in tasks)
+
+# Optional: if you really need cadwyn features, we'll handle it below

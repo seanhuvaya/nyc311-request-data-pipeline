@@ -5,7 +5,6 @@ import pandas as pd
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
-
 from src.utils.config import settings
 
 logger = logging.getLogger(__name__)
@@ -38,31 +37,29 @@ class NYC311ServiceRequestsClient:
 
         logger.info(f"Fetching 311 requests from date: {start_date}")
 
-        nyc311_service_requests = []
+        try:
+            nyc311_service_requests = []
 
-        while True:
-            response = self.session.get(self.resource_url, params=params, timeout=30)
+            while True:
+                response = self.session.get(self.resource_url, params=params, timeout=30)
 
-            if not response.ok:
-                err_msg = response.json().get("message", response.text)
-                logger.error(f"API request failed [{response.status_code}]: {err_msg}")
-                raise Exception(err_msg)
+                if not response.ok:
+                    err_msg = response.json().get("message", response.text)
+                    logger.error(f"API request failed [{response.status_code}]: {err_msg}")
+                    raise Exception(err_msg)
 
-            data = response.json()
-            if not data:
-                break
+                data = response.json()
+                if not data:
+                    break
 
-            nyc311_service_requests.extend(data)
-            params["$offset"] += limit
+                nyc311_service_requests.extend(data)
+                params["$offset"] += limit
 
-        logger.info(f"Successfully fetched {len(nyc311_service_requests)} requests")
-        return pd.DataFrame(nyc311_service_requests)
+            logger.info(f"Successfully fetched {len(nyc311_service_requests)} requests")
+            return pd.DataFrame(nyc311_service_requests)
+        except Exception as e:
+            logger.error(f"Failed to fetch latest nyc311 service requests")
+            raise e
 
 
-if __name__ == "__main__":
-    from src.utils.logger import setup_logging
-
-    setup_logging()
-    service_requests_client = NYC311ServiceRequestsClient(settings.DATASET_URL)
-    res_data = service_requests_client.fetch_nyc311_service_requests(start_date=datetime(2026, 3, 24))
-    print(res_data.head())
+service_requests_client = NYC311ServiceRequestsClient(settings.DATASET_URL)
