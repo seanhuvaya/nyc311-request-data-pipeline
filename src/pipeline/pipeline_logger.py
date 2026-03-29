@@ -13,6 +13,7 @@ def create_pipeline_run(pipeline_name: str):
     with get_db_session() as session:
         session.add_all([pipeline_run])
         session.flush()
+        session.commit()
 
         return pipeline_run.pipeline_run_id
 
@@ -35,6 +36,7 @@ def create_pipeline_step_run(pipeline_run_id: int, dag_id: str, step_name: str, 
     with get_db_session() as session:
         session.add_all([pipeline_step_run])
         session.flush()
+        session.commit()
 
         return pipeline_step_run.pipeline_step_run_id
 
@@ -43,6 +45,7 @@ def save_pipeline_run(pipeline_run: PipelineRun):
     with get_db_session() as session:
         session.add_all([pipeline_run])
         session.flush()
+        session.commit()
 
         return pipeline_run.pipeline_run_id
 
@@ -51,5 +54,6 @@ def save_pipeline_step_run(pipeline_step_run: PipelineStepRun):
     with get_db_session() as session:
         session.add_all([pipeline_step_run])
         session.flush()
+        session.commit()
 
         return pipeline_step_run.pipeline_step_run_id

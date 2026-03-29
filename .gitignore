@@ -19,6 +19,8 @@ spark-warehouse/
 derby.log
 metastore_db/
 
+airflow
+
 .env
 .idea
 .DS_store

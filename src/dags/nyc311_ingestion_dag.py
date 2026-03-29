@@ -1,10 +1,11 @@
 import logging
 from datetime import datetime, timezone, timedelta
 
+from airflow.providers.standard.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.sdk import dag, task
 
 from src.db.models import PipelineStepRun
-from src.pipeline.pipeline_logger import save_pipeline_step_run
+from src.pipeline.pipeline_logger import save_pipeline_step_run, create_pipeline_run
 from src.extract.metadata import save_ingestion_metadata
 from src.extract.client import NYC311ServiceRequestsClient
 from src.extract.metadata import get_latest_record_created_date
@@ -25,6 +26,10 @@ logger = logging.getLogger(__name__)
     tags=["nyc311", "etl"],
 )
 def nyc311_ingestion():
+    @task()
+    def start_pipeline_run():
+        return create_pipeline_run("nyc_311_daily")
+
     @task()
     def determine_start_date():
         latest_created_date = get_latest_record_created_date()
@@ -65,20 +70,19 @@ def nyc311_ingestion():
         }
 
     @task()
-    def log_ingestion_metadata(result: dict):
+    def log_ingestion_metadata(result: dict, pipeline_run_id: int):
         latest_record_created_date = result["latest_record_created_date"]
         row_count = result["row_count"]
         s3_key = result["s3_key"]
 
         return save_ingestion_metadata(latest_record_date=latest_record_created_date,
                                        row_count=row_count,
-                                       s3_key=s3_key)
+                                       s3_key=s3_key,
+                                       pipeline_run_id=pipeline_run_id)
 
     @task()
-    def log_pipeline_run_step(result: dict, **context):
-        dag_run = context["dag_run"]
-        started_at = dag_run.start_date
-        pipeline_run_id = dag_run.conf["pipeline_run_id"]
+    def log_pipeline_run_step(result: dict, pipeline_run_id: int, **context):
+        started_at = context["dag_run"].start_date
         dag_id = context["dag"].dag_id
 
         logger.info(f"Logging ingestion metadata for pipeline_run: {pipeline_run_id}")
@@ -98,12 +102,27 @@ def nyc311_ingestion():
 
         return result
 
+    @task()
+    def build_transformation_conf(pipeline_run_id: int, result: dict):
+        return {
+            "pipeline_run_id": pipeline_run_id,
+            "s3_key": result["s3_key"],
+        }
+
+    pipeline_run_id = start_pipeline_run()
     start_date = determine_start_date()
     upload_result = extract_and_upload_to_s3(start_date)
-    ingestion_metadata_id = log_ingestion_metadata(upload_result)
-    log_result = log_pipeline_run_step(upload_result)
+    ingestion_metadata_id = log_ingestion_metadata(upload_result, pipeline_run_id)
+    log_result = log_pipeline_run_step(upload_result, pipeline_run_id)
+    transformation_conf = build_transformation_conf(pipeline_run_id, upload_result)
 
-    start_date >> upload_result >> (ingestion_metadata_id, log_result)
+    trigger_transformation = TriggerDagRunOperator(
+        task_id="trigger_transformation",
+        trigger_dag_id="nyc311_transformation",
+        conf=transformation_conf
+    )
+
+    pipeline_run_id >> start_date >> upload_result >> (ingestion_metadata_id, log_result) >> trigger_transformation
 
 
 nyc311_ingestion()
