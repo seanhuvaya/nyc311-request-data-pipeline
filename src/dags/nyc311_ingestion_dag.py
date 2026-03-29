@@ -65,14 +65,16 @@ def nyc311_ingestion():
         }
 
     @task()
-    def log_ingestion_metadata(result: dict):
+    def log_ingestion_metadata(result: dict, **context):
+        pipeline_run_id = context["dag_run"].conf["pipeline_run_id"]
         latest_record_created_date = result["latest_record_created_date"]
         row_count = result["row_count"]
         s3_key = result["s3_key"]
 
         return save_ingestion_metadata(latest_record_date=latest_record_created_date,
                                        row_count=row_count,
-                                       s3_key=s3_key)
+                                       s3_key=s3_key,
+                                       pipeline_run_id=pipeline_run_id)
 
     @task()
     def log_pipeline_run_step(result: dict, **context):

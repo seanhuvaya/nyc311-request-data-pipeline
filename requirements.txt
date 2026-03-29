@@ -8,6 +8,9 @@ pandas
 pyarrow
 boto3
 python-dotenv
+zstandard
+pyspark
+apache-airflow-providers-apache-spark
 # Add any others your src/ uses (e.g. pyspark if needed in tasks)
 
 # Optional: if you really need cadwyn features, we'll handle it below

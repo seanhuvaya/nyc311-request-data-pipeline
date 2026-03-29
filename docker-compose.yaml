@@ -8,7 +8,7 @@ x-airflow-common: &airflow-common
     AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_USER_PASSWORD:-airflow}@host.docker.internal:5432/${AIRFLOW_DB_NAME:-airflow}
     AIRFLOW__CELERY__BROKER_URL: redis://:${REDIS_PASSWORD:-verysecretpassword123}@host.docker.internal:6379/0
 
-    AIRFLOW__CORE__FERNET_KEY: "REPLACE_WITH_REAL_FERNET_KEY"
+    AIRFLOW__CORE__FERNET_KEY: "Z0mPUdKS8tNudnXdTRw8I056wMQKrlCzIPtBvljkD-A="
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
@@ -31,11 +31,13 @@ x-airflow-common: &airflow-common
     PG_DATABASE: ${PG_DATABASE}
     DATASET_URL: ${DATASET_URL}
 
+    JAVA_HOME: /usr/lib/jvm/java-17-openjdk-arm64
+
   volumes:
     - ./src:/opt/airflow/src          # Add this line
     - ./src/dags:/opt/airflow/dags    # Keep your existing one (or simplify)
-    - ./logs:/opt/airflow/logs
-    - ./plugins:/opt/airflow/plugins
+    - ./airflow/logs:/opt/airflow/logs
+    - ./airflow/plugins:/opt/airflow/plugins
 
   user: "${AIRFLOW_UID:-50000}:0"
 
@@ -163,3 +165,20 @@ services:
     depends_on:
       airflow-init:
         condition: service_completed_successfully
+
+  spark-master:
+    image: apache/spark:3.5.0
+    container_name: spark_master
+    command: >
+      /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    ports:
+      - "7077:7077"
+      - "8081:8080"
+
+  spark-worker:
+    image: apache/spark:3.5.0
+    container_name: spark_worker
+    command: >
+      /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    depends_on:
+      - spark-master

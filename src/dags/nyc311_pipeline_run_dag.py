@@ -28,7 +28,15 @@ def nyc311_pipeline_run():
         }
     )
 
-    pipeline_run_id >> trigger_ingestion
+    trigger_transformation = TriggerDagRunOperator(
+        task_id="trigger_transformation",
+        trigger_dag_id="nyc311_transformation",
+        conf={
+            "pipeline_run_id": pipeline_run_id,
+        }
+    )
+    
+    pipeline_run_id >> trigger_ingestion >> trigger_transformation
 
 
 nyc311_pipeline_run()
