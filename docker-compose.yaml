@@ -18,7 +18,7 @@ x-airflow-common: &airflow-common
     AIRFLOW__API__SECRET_KEY: "yet-another-strong-secret"
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
 
-    PYTHONPATH: /opt/airflow/src:${PYTHONPATH:-}
+    PYTHONPATH: /opt/airflow:/opt/airflow/src:/opt/spark/python:/opt/spark/python/lib/py4j-0.10.9.7-src.zip
 
     AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
     AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}

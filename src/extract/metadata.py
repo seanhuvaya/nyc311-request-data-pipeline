@@ -30,6 +30,7 @@ def save_ingestion_metadata(latest_record_date: datetime, row_count: int, s3_key
 
         session.add(record)
         session.flush()
+        session.commit()
 
         return record.id
 
@@ -39,5 +40,7 @@ def get_s3_key_by_pipeline_run_id(pipeline_run_id: int) -> str:
         stmt = select(IngestionMetadata.s3_key) \
             .where(IngestionMetadata.pipeline_run_id == pipeline_run_id) \
             .limit(1)
+
+        logger.info(f"Generated sql: {stmt.compile(compile_kwargs={'literal_binds': True})}")
 
         return session.execute(stmt).scalar_one_or_none()

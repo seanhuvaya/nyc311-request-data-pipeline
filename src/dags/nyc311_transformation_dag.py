@@ -1,8 +1,9 @@
 import logging
 from datetime import datetime
+
 from airflow.sdk import dag, task, get_current_context
 
-from src.transform.transform import transform_nyc311_data
+from transform.transform import transform_nyc311_data
 
 logger = logging.getLogger(__name__)
 
@@ -19,16 +20,13 @@ def nyc311_transformation_dag():
     def run_nyc311_transformation():
         context = get_current_context()
         dag_run = context["dag_run"]
-        pipeline_run_id = dag_run.conf["pipeline_run_id"]
+        s3_key = dag_run.conf["s3_key"]
 
-        df = transform_nyc311_data(pipeline_run_id=pipeline_run_id)
+        logger.info(f"Retrieved s3_key: {s3_key}")
 
-        logger.info(f"Shape: {df.shape}")
+        df = transform_nyc311_data(s3_key)
 
-        logger.info(
-            "Running nyc311 transformation with pipeline_run_id: %s",
-            pipeline_run_id,
-        )
+        logger.info(f"Shape: ({df.count()}, {len(df.columns)})")
 
     run_nyc311_transformation()
 

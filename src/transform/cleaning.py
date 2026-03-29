@@ -1,7 +1,6 @@
 import logging
 
 from pyspark.sql import DataFrame, Window
-from pyspark.sql.connect.functions import when
 from pyspark.sql.functions import coalesce, col, first, lit, to_timestamp, avg
 from pyspark.sql.types import FloatType, IntegerType
 
@@ -75,4 +74,4 @@ def impute_coordinates(df: DataFrame) -> DataFrame:
         .join(zip_centroids.alias("z"), on="incident_zip", how="left") \
         .join(cb_centroids.alias("c"), on="community_board", how="left") \
         .withColumn("latitude", coalesce(col("d.latitude"), col("z.zip_latitude"), col("c.cb_latitude"))) \
-        .withColumn("longitude", coalesce(col("d.longitude"), col("z.zip_longitude"), col("cb_latitude")))
+        .withColumn("longitude", coalesce(col("d.longitude"), col("z.zip_longitude"), col("c.cb_longitude")))

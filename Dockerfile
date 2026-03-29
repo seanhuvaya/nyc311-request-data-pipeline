@@ -20,6 +20,12 @@ RUN curl -L https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-$
     mv /opt/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} /opt/spark && \
     rm /tmp/spark.tgz
 
+# 3. Download hadoop-aws and aws-java-sdk-bundle JARs (must match Hadoop 3.3.4 bundled with Spark 3.5.0)
+RUN curl -L https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar \
+      -o /opt/spark/jars/hadoop-aws-3.3.4.jar && \
+    curl -L https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar \
+      -o /opt/spark/jars/aws-java-sdk-bundle-1.12.262.jar
+
 # Ensure the airflow user has full access to the Spark binaries
 RUN chown -R airflow:root /opt/spark && chmod -R 755 /opt/spark
 
@@ -39,6 +45,4 @@ USER airflow
 COPY requirements.txt /opt/airflow/requirements.txt
 
 RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir \
-       -r /opt/airflow/requirements.txt \
-       --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-3.1.7/constraints-3.12.txt"
+    && pip install --no-cache-dir -r /opt/airflow/requirements.txt

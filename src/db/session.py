@@ -16,7 +16,6 @@ def get_db_session():
     session = SessionLocal()
     try:
         yield session
-        session.commit()
     except:
         session.rollback()
         raise
