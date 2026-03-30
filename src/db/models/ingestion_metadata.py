@@ -12,7 +12,6 @@ class IngestionMetadata(Base):
     num_records_pulled = Column(Integer, nullable=False, default=0)
     latest_record_created_date = Column(DateTime(timezone=True))
 
-    s3_key = Column(String)
     pipeline_run_id = Column(Integer, ForeignKey("pipeline_runs.pipeline_run_id"), nullable=False, default=0)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

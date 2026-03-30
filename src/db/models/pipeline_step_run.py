@@ -17,5 +17,6 @@ class PipelineStepRun(Base):
     num_records_in = Column(Integer, nullable=False)
     num_records_out = Column(Integer, nullable=False)
     error_message = Column(String)
+    s3_file_key = Column(String)
 
     pipeline_run = relationship("PipelineRun", back_populates="pipeline_step_runs")

@@ -73,11 +73,9 @@ def nyc311_daily_ingestion():
     def log_ingestion_metadata(result: dict, pipeline_run_id: int):
         latest_record_created_date = result["latest_record_created_date"]
         row_count = result["row_count"]
-        s3_key = result["s3_key"]
 
         return save_ingestion_metadata(latest_record_date=latest_record_created_date,
                                        row_count=row_count,
-                                       s3_key=s3_key,
                                        pipeline_run_id=pipeline_run_id)
 
     @task()
@@ -95,7 +93,8 @@ def nyc311_daily_ingestion():
             started_at=started_at,
             finished_at=datetime.now(timezone.utc),
             num_records_in=result["row_count"],
-            num_records_out=result["row_count"]
+            num_records_out=result["row_count"],
+            s3_file_key=result["s3_key"],
         )
 
         save_pipeline_step_run(pipeline_step_run)

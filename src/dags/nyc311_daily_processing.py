@@ -74,7 +74,8 @@ def nyc311_daily_processing():
             started_at=started_at,
             finished_at=datetime.now(timezone.utc),
             num_records_in=result["records_in"],
-            num_records_out=result["records_out"]
+            num_records_out=result["records_out"],
+            s3_file_key=result["s3_key"],
         )
 
         save_pipeline_step_run(pipeline_step_run)
