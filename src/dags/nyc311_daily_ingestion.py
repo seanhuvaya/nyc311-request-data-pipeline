@@ -19,13 +19,13 @@ logger = logging.getLogger(__name__)
 
 
 @dag(
-    dag_id="nyc311_ingestion",
+    dag_id="nyc311_daily_ingestion",
     schedule=None,
     start_date=datetime(2026, 3, 28),
     catchup=False,
     tags=["nyc311", "etl"],
 )
-def nyc311_ingestion():
+def nyc311_daily_ingestion():
     @task()
     def start_pipeline_run():
         return create_pipeline_run("nyc_311_daily")
@@ -35,13 +35,13 @@ def nyc311_ingestion():
         latest_created_date = get_latest_record_created_date()
 
         if not latest_created_date:
-            latest_created_date = (datetime.now(timezone.utc) - timedelta(days=1)) \
+            latest_created_date = (datetime.now(timezone.utc) - timedelta(days=2)) \
                 .replace(hour=0, minute=0, second=0, microsecond=0)
 
         return latest_created_date
 
     @task()
-    def extract_and_upload_to_s3(start_date: datetime):
+    def extract_and_upload_to_s3_bronze(start_date: datetime):
         logger.info(f"Creating nyc311 service requests client...")
         service_requests_client = NYC311ServiceRequestsClient(settings.DATASET_URL)
 
@@ -56,7 +56,7 @@ def nyc311_ingestion():
                 "s3_key": None
             }
 
-        s3_key = f"raw/date={start_date.strftime('%Y%m%d')}/{settings.AWS_S3_DATA_PARQUET_FILENAME}"
+        s3_key = f"bronze/date={start_date.strftime('%Y-%m-%d')}/{settings.AWS_S3_DATA_PARQUET_FILENAME}"
         upload_data_to_s3(service_requests_df, s3_key)
 
         latest_record_created_date = service_requests_df['created_date'].max()
@@ -73,11 +73,9 @@ def nyc311_ingestion():
     def log_ingestion_metadata(result: dict, pipeline_run_id: int):
         latest_record_created_date = result["latest_record_created_date"]
         row_count = result["row_count"]
-        s3_key = result["s3_key"]
 
         return save_ingestion_metadata(latest_record_date=latest_record_created_date,
                                        row_count=row_count,
-                                       s3_key=s3_key,
                                        pipeline_run_id=pipeline_run_id)
 
     @task()
@@ -95,7 +93,8 @@ def nyc311_ingestion():
             started_at=started_at,
             finished_at=datetime.now(timezone.utc),
             num_records_in=result["row_count"],
-            num_records_out=result["row_count"]
+            num_records_out=result["row_count"],
+            s3_file_key=result["s3_key"],
         )
 
         save_pipeline_step_run(pipeline_step_run)
@@ -107,22 +106,25 @@ def nyc311_ingestion():
         return {
             "pipeline_run_id": pipeline_run_id,
             "s3_key": result["s3_key"],
+            "latest_record_created_date": result["latest_record_created_date"],
         }
 
     pipeline_run_id = start_pipeline_run()
     start_date = determine_start_date()
-    upload_result = extract_and_upload_to_s3(start_date)
+    upload_result = extract_and_upload_to_s3_bronze(start_date)
     ingestion_metadata_id = log_ingestion_metadata(upload_result, pipeline_run_id)
     log_result = log_pipeline_run_step(upload_result, pipeline_run_id)
     transformation_conf = build_transformation_conf(pipeline_run_id, upload_result)
 
-    trigger_transformation = TriggerDagRunOperator(
-        task_id="trigger_transformation",
-        trigger_dag_id="nyc311_transformation",
+    logger.info(transformation_conf)
+
+    trigger_processing = TriggerDagRunOperator(
+        task_id="trigger_processing",
+        trigger_dag_id="nyc311_daily_processing",
         conf=transformation_conf
     )
 
-    pipeline_run_id >> start_date >> upload_result >> (ingestion_metadata_id, log_result) >> trigger_transformation
+    pipeline_run_id >> start_date >> upload_result >> (ingestion_metadata_id, log_result) >> trigger_processing
 
 
-nyc311_ingestion()
+nyc311_daily_ingestion()
