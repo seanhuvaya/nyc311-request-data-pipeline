@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 def upload_data_to_s3(df: DataFrame, s3_key: str):
     try:
         parquet_buffer = BytesIO()
-        df.to_parquet(parquet_buffer, index=False, engine="pyarrow")
+        df.to_parquet(parquet_buffer, index=False, engine="pyarrow", coerce_timestamps="us",
+                      allow_truncated_timestamps=True)
 
         s3_client = boto3.client("s3")
 
