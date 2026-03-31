@@ -3,12 +3,13 @@ from datetime import datetime, timezone
 
 from airflow.sdk import dag, task, get_current_context
 from pyspark.sql import SparkSession
+from pyspark.sql.functions import col
 
-from pipeline.pipeline_logger import save_pipeline_step_run
+from src.pipeline.pipeline_logger import save_pipeline_step_run, get_latest_pipeline_step_run_by_step_name
 from src.db.models import PipelineStepRun
 from src.transform.processing import process_nyc311_daily_data
 from src.utils.config import settings
-from utils.s3_utils import upload_data_to_s3
+from src.utils.s3_utils import upload_data_to_s3
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +24,9 @@ logger = logging.getLogger(__name__)
 def nyc311_daily_processing():
     @task()
     def process_and_upload_to_s3_silver():
-        context = get_current_context()
-        dag_run = context["dag_run"]
-        s3_bronze_key = dag_run.conf["s3_key"]
-        latest_record_created_date = dag_run.conf["latest_record_created_date"]
+        pipeline_step_run = get_latest_pipeline_step_run_by_step_name("extract")
+
+        s3_bronze_key = pipeline_step_run.s3_file_key
 
         spark = SparkSession.builder \
             .appName("NYC311Transform") \
@@ -42,17 +42,14 @@ def nyc311_daily_processing():
 
         df_processed = process_nyc311_daily_data(df)
 
-        date_format = '%Y-%m-%dT%H:%M:%S.%f'
-        created_date = datetime.strptime(latest_record_created_date, date_format)
-
-        s3_silver_key = f"silver/date={created_date.strftime('%Y-%m-%d')}/{settings.AWS_S3_DATA_PARQUET_FILENAME}"
+        s3_silver_key = f"silver/date={datetime.now(timezone.utc).strftime('%Y-%m-%d')}/{settings.AWS_S3_DATA_PARQUET_FILENAME}"
         upload_data_to_s3(df_processed.toPandas(), s3_silver_key)
 
         result = {
             "records_in": df.count(),
             "records_out": df_processed.count(),
             "s3_key": s3_silver_key,
-            "status": "success",
+            "status": "success"
         }
 
         spark.stop()
@@ -64,10 +61,8 @@ def nyc311_daily_processing():
         context = get_current_context()
         dag_id = context["dag"].dag_id
         started_at = context["dag_run"].start_date
-        pipeline_run_id = context["dag_run"].conf["pipeline_run_id"]
 
         pipeline_step_run = PipelineStepRun(
-            pipeline_run_id=pipeline_run_id,
             dag_id=dag_id,
             step_name="transform",
             status="success",
@@ -75,7 +70,7 @@ def nyc311_daily_processing():
             finished_at=datetime.now(timezone.utc),
             num_records_in=result["records_in"],
             num_records_out=result["records_out"],
-            s3_file_key=result["s3_key"],
+            s3_file_key=result["s3_key"]
         )
 
         save_pipeline_step_run(pipeline_step_run)

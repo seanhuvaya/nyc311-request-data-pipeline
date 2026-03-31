@@ -1,7 +1,7 @@
 import logging
 
 from pyspark.sql import DataFrame, Window
-from pyspark.sql.functions import coalesce, col, first, lit, to_timestamp, avg
+from pyspark.sql.functions import coalesce, col, first, lit, to_timestamp, avg, when
 from pyspark.sql.types import FloatType, IntegerType
 
 COLUMNS_TO_DROP = [
@@ -11,7 +11,7 @@ COLUMNS_TO_DROP = [
     "intersection_street_1", "intersection_street_2", "park_borough", "location",
     "x_coordinate_state_plane", "y_coordinate_state_plane", "open_data_channel_type",
     "park_facility_name", "landmark", "bbl", "resolution_description",
-    "resolution_action_updated_date"
+    "resolution_action_updated_date", "due_date", "taxi_company_borough"
 ]
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,9 @@ logger = logging.getLogger(__name__)
 def cast_column_types(df: DataFrame) -> DataFrame:
     logger.info(f"Casting column types...")
     return df \
-        .withColumn("created_date", to_timestamp("created_date", "yyyy-MM-dd HH:mm:ss")) \
+        .withColumn("created_date", to_timestamp("created_date", "yyyy-MM-dd'T'HH:mm:ss.SSS")) \
+        .withColumn("closed_date", when(col("closed_date").isNotNull(),
+                                        to_timestamp(col("closed_date"), "yyyy-MM-dd'T'HH:mm:ss.SSS"))) \
         .withColumn("latitude", col("latitude").cast(FloatType())) \
         .withColumn("longitude", col("longitude").cast(FloatType())) \
         .withColumn("unique_key", col("unique_key").cast(IntegerType())) \
@@ -69,9 +71,11 @@ def impute_coordinates(df: DataFrame) -> DataFrame:
         .groupBy("community_board") \
         .agg(avg("latitude").alias("cb_latitude"), avg("longitude").alias("cb_longitude"))
 
-    return df \
+    df = df \
         .alias("d") \
         .join(zip_centroids.alias("z"), on="incident_zip", how="left") \
         .join(cb_centroids.alias("c"), on="community_board", how="left") \
         .withColumn("latitude", coalesce(col("d.latitude"), col("z.zip_latitude"), col("c.cb_latitude"))) \
         .withColumn("longitude", coalesce(col("d.longitude"), col("z.zip_longitude"), col("c.cb_longitude")))
+
+    return df.drop(*['zip_latitude', 'zip_longitude', 'cb_latitude', 'cb_longitude'])
