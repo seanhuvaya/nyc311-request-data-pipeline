@@ -85,6 +85,6 @@ def add_derived_columns(df: DataFrame) -> DataFrame:
     logger.info(f"Adding derived columns...")
     df = df \
         .withColumn("is_closed", when(col("closed_date").isNotNull(), True).otherwise(False)) \
-        .withColumn("resolution_time_in_minutes", when(col("closed_date").isNotNull(), (
-                unix_timestamp(col("closed_date")) - unix_timestamp(col("created_date"))) / 60).otherwise(None))
+        .withColumn("resolution_time_in_hours", when(col("closed_date").isNotNull(), (
+            unix_timestamp(col("closed_date")) - unix_timestamp(col("created_date"))) / (60 * 60)).otherwise(None))
     return df

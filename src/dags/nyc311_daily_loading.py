@@ -38,6 +38,14 @@ def nyc311_daily_loading():
             .getOrCreate()
 
         df = spark.read.parquet(f"s3a://{settings.AWS_S3_BUCKET}/{s3_key}")
+
+        if df.count() == 0 or df.isEmpty():
+            logger.info(f"No records found for {s3_key}")
+            spark.stop()
+            return {
+                "records_count": df.count(),
+            }
+
         df = df \
             .withColumn("created_date", F.to_timestamp(F.col("created_date"), "yyyy-MM-dd'T'HH:mm:ss.SSS")) \
             .withColumn("closed_date", F.to_timestamp(F.col("closed_date"), "yyyy-MM-dd'T'HH:mm:ss.SSS"))
@@ -66,6 +74,12 @@ def nyc311_daily_loading():
             .getOrCreate()
 
         df = spark.read.parquet(f"s3a://{settings.AWS_S3_BUCKET}/{s3_key}")
+
+        if df.count() == 0 or df.isEmpty():
+            logger.info(f"No records found for {s3_key}")
+            spark.stop()
+            return
+
         df = df \
             .withColumn("created_date", F.to_timestamp(F.col("created_date"), "yyyy-MM-dd'T'HH:mm:ss.SSS")) \
             .withColumn("closed_date", F.to_timestamp(F.col("closed_date"), "yyyy-MM-dd'T'HH:mm:ss.SSS"))
@@ -89,9 +103,12 @@ def nyc311_daily_loading():
             .agg(F.count("*").alias("total_requests"),
                  F.count(F.when(F.col("is_closed") == True, 1).otherwise(0)).alias("closed_requests"),
                  F.avg("resolution_time_in_minutes").alias("avg_resolution_time_in_minutes")) \
-            .select("request_date", "complaint_type", "total_requests", "closed_requests", "avg_resolution_time_in_minutes")
+            .select("request_date", "complaint_type", "total_requests", "closed_requests",
+                    "avg_resolution_time_in_minutes")
 
         load_to_postgres(requests_by_complaint_type_df, "gold_nyc311_requests_by_complaint_daily")
+
+        spark.stop()
 
     @task()
     def log_pipeline_run_step(result: dict):
