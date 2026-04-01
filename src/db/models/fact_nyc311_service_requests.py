@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, Column, String, Float, DateTime
+from sqlalchemy import Integer, Column, String, Float, DateTime, Boolean
 
 from src.db.models import Base
 
@@ -23,3 +23,6 @@ class NYC311ServiceRequest(Base):
     borough = Column(String, nullable=False)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
+
+    is_closed = Column(Boolean, nullable=False, default=False)
+    resolution_time_in_minutes = Column(Float)

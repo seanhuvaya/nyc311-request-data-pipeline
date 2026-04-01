@@ -1,7 +1,7 @@
 import logging
 
 from pyspark.sql import DataFrame, Window
-from pyspark.sql.functions import coalesce, col, first, lit, to_timestamp, avg, when
+from pyspark.sql.functions import coalesce, col, first, lit, to_timestamp, avg, when, unix_timestamp
 from pyspark.sql.types import FloatType, IntegerType
 
 COLUMNS_TO_DROP = [
@@ -79,3 +79,12 @@ def impute_coordinates(df: DataFrame) -> DataFrame:
         .withColumn("longitude", coalesce(col("d.longitude"), col("z.zip_longitude"), col("c.cb_longitude")))
 
     return df.drop(*['zip_latitude', 'zip_longitude', 'cb_latitude', 'cb_longitude'])
+
+
+def add_derived_columns(df: DataFrame) -> DataFrame:
+    logger.info(f"Adding derived columns...")
+    df = df \
+        .withColumn("is_closed", when(col("closed_date").isNotNull(), True).otherwise(False)) \
+        .withColumn("resolution_time_in_minutes", when(col("closed_date").isNotNull(), (
+                unix_timestamp(col("closed_date")) - unix_timestamp(col("created_date"))) / 60).otherwise(None))
+    return df
