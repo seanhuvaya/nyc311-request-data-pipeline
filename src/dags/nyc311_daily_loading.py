@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from airflow.sdk import dag, task, get_current_context
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, to_timestamp
+from pyspark.sql import functions as F
 
 from src.db.models import PipelineStepRun
 from src.pipeline.pipeline_logger import get_latest_pipeline_step_run_by_step_name, save_pipeline_step_run
@@ -39,8 +39,8 @@ def nyc311_daily_loading():
 
         df = spark.read.parquet(f"s3a://{settings.AWS_S3_BUCKET}/{s3_key}")
         df = df \
-            .withColumn("created_date", to_timestamp(col("created_date"), "yyyy-MM-dd'T'HH:mm:ss.SSS")) \
-            .withColumn("closed_date", to_timestamp(col("closed_date"), "yyyy-MM-dd'T'HH:mm:ss.SSS"))
+            .withColumn("created_date", F.to_timestamp(F.col("created_date"), "yyyy-MM-dd'T'HH:mm:ss.SSS")) \
+            .withColumn("closed_date", F.to_timestamp(F.col("closed_date"), "yyyy-MM-dd'T'HH:mm:ss.SSS"))
 
         load_to_postgres(df, "fact_nyc311_service_requests")
 
@@ -53,6 +53,45 @@ def nyc311_daily_loading():
         spark.stop()
 
         return results
+
+    @task()
+    def build_gold_tables(s3_key: str):
+        spark = SparkSession.builder \
+            .appName("NYC311GoldTables") \
+            .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
+            .config("spark.hadoop.fs.s3a.access.key", settings.AWS_ACCESS_KEY_ID) \
+            .config("spark.hadoop.fs.s3a.secret.key", settings.AWS_SECRET_ACCESS_KEY) \
+            .config("spark.hadoop.fs.s3a.endpoint", "s3.amazonaws.com") \
+            .config("spark.jars.packages", "org.postgresql:postgresql:42.7.3") \
+            .getOrCreate()
+
+        df = spark.read.parquet(f"s3a://{settings.AWS_S3_BUCKET}/{s3_key}")
+        df = df \
+            .withColumn("created_date", F.to_timestamp(F.col("created_date"), "yyyy-MM-dd'T'HH:mm:ss.SSS")) \
+            .withColumn("closed_date", F.to_timestamp(F.col("closed_date"), "yyyy-MM-dd'T'HH:mm:ss.SSS"))
+
+        requests_daily_df = df.withColumn("request_date", F.to_date("created_date")) \
+            .groupBy("request_date").agg(F.count("*").alias("total_requests"),
+                                         F.sum(F.when(F.col("is_closed") == True, 1).otherwise(0)).alias(
+                                             "closed_requests"),
+                                         F.sum(F.when(F.col("is_closed") == False, 1).otherwise(0)).alias(
+                                             "open_requests"),
+                                         F.avg("resolution_time_in_minutes").alias("avg_resolution_time_in_minutes")) \
+            .withColumn("pct_closed", F.when(F.col("total_requests") > 0,
+                                             F.col("closed_requests") / F.col("total_requests")).otherwise(F.lit(0.0))) \
+            .select("request_date", "total_requests", "closed_requests", "open_requests", "pct_closed",
+                    "avg_resolution_time_in_minutes")
+
+        load_to_postgres(requests_daily_df, "gold_nyc311_requests_daily")
+
+        requests_by_complaint_type_df = df.withColumn("request_date", F.to_date("created_date")) \
+            .groupBy("request_date", "complaint_type") \
+            .agg(F.count("*").alias("total_requests"),
+                 F.count(F.when(F.col("is_closed") == True, 1).otherwise(0)).alias("closed_requests"),
+                 F.avg("resolution_time_in_minutes").alias("avg_resolution_time_in_minutes")) \
+            .select("request_date", "complaint_type", "total_requests", "closed_requests", "avg_resolution_time_in_minutes")
+
+        load_to_postgres(requests_by_complaint_type_df, "gold_nyc311_requests_by_complaint_daily")
 
     @task()
     def log_pipeline_run_step(result: dict):
@@ -78,7 +117,7 @@ def nyc311_daily_loading():
     fact_result = load_daily_fact(silver_s3_key)
     log_result = log_pipeline_run_step(fact_result)
 
-    silver_s3_key >> fact_result >> log_result
+    silver_s3_key >> fact_result >> build_gold_tables(s3_key=silver_s3_key) >> log_result
 
 
 nyc311_daily_loading()
