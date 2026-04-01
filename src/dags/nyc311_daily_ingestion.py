@@ -10,6 +10,7 @@ from src.pipeline.pipeline_logger import save_pipeline_step_run
 from src.utils.config import settings
 from src.utils.logger import setup_logging
 from src.utils.s3_utils import upload_data_to_s3
+from src.utils.dag_utils import failure_callback
 
 setup_logging()
 
@@ -22,6 +23,9 @@ logger = logging.getLogger(__name__)
     start_date=datetime(2026, 3, 28),
     catchup=False,
     tags=["nyc311", "etl"],
+    default_args={
+        "on_failure_callback": lambda context: failure_callback(context, step_name="extract"),
+    }
 )
 def nyc311_daily_ingestion():
     @task()

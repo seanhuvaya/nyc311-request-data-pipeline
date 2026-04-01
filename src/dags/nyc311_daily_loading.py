@@ -8,6 +8,7 @@ from pyspark.sql import functions as F
 from src.db.models import PipelineStepRun
 from src.pipeline.pipeline_logger import get_latest_pipeline_step_run_by_step_name, save_pipeline_step_run
 from src.utils.config import settings
+from src.utils.dag_utils import failure_callback
 from src.utils.spark_utils import load_to_postgres
 
 logger = logging.getLogger(__name__)
@@ -19,6 +20,9 @@ logger = logging.getLogger(__name__)
     start_date=datetime(2026, 3, 28),
     catchup=False,
     tags=["nyc311", "etl"],
+    default_args={
+        "on_failure_callback": lambda context: failure_callback(context, step_name="load"),
+    }
 )
 def nyc311_daily_loading():
     @task()
