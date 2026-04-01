@@ -84,6 +84,15 @@ def nyc311_daily_loading():
 
         load_to_postgres(requests_daily_df, "gold_nyc311_requests_daily")
 
+        requests_by_complaint_type_df = df.withColumn("request_date", F.to_date("created_date")) \
+            .groupBy("request_date", "complaint_type") \
+            .agg(F.count("*").alias("total_requests"),
+                 F.count(F.when(F.col("is_closed") == True, 1).otherwise(0)).alias("closed_requests"),
+                 F.avg("resolution_time_in_minutes").alias("avg_resolution_time_in_minutes")) \
+            .select("request_date", "complaint_type", "total_requests", "closed_requests", "avg_resolution_time_in_minutes")
+
+        load_to_postgres(requests_by_complaint_type_df, "gold_nyc311_requests_by_complaint_daily")
+
     @task()
     def log_pipeline_run_step(result: dict):
         context = get_current_context()
