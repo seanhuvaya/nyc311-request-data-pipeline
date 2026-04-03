@@ -94,11 +94,11 @@ def nyc311_daily_loading():
                                              "closed_requests"),
                                          F.sum(F.when(F.col("is_closed") == False, 1).otherwise(0)).alias(
                                              "open_requests"),
-                                         F.avg("resolution_time_in_minutes").alias("avg_resolution_time_in_minutes")) \
+                                         F.avg("resolution_time_in_hours").alias("avg_resolution_time_in_hours")) \
             .withColumn("pct_closed", F.when(F.col("total_requests") > 0,
                                              F.col("closed_requests") / F.col("total_requests")).otherwise(F.lit(0.0))) \
             .select("request_date", "total_requests", "closed_requests", "open_requests", "pct_closed",
-                    "avg_resolution_time_in_minutes")
+                    "avg_resolution_time_in_hours")
 
         load_to_postgres(requests_daily_df, "gold_nyc311_requests_daily")
 
@@ -106,9 +106,9 @@ def nyc311_daily_loading():
             .groupBy("request_date", "complaint_type") \
             .agg(F.count("*").alias("total_requests"),
                  F.count(F.when(F.col("is_closed") == True, 1).otherwise(0)).alias("closed_requests"),
-                 F.avg("resolution_time_in_minutes").alias("avg_resolution_time_in_minutes")) \
+                 F.avg("resolution_time_in_hours").alias("avg_resolution_time_in_hours")) \
             .select("request_date", "complaint_type", "total_requests", "closed_requests",
-                    "avg_resolution_time_in_minutes")
+                    "avg_resolution_time_in_hours")
 
         load_to_postgres(requests_by_complaint_type_df, "gold_nyc311_requests_by_complaint_daily")
 

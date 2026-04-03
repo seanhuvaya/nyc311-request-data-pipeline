@@ -1,12 +1,10 @@
 x-airflow-common: &airflow-common
   build: .
   environment: &airflow-common-env
-    AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
 
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-airflow}@host.docker.internal:5432/${AIRFLOW_DB_NAME:-airflow}
-    AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_USER_PASSWORD:-airflow}@host.docker.internal:5432/${AIRFLOW_DB_NAME:-airflow}
-    AIRFLOW__CELERY__BROKER_URL: redis://:${REDIS_PASSWORD:-verysecretpassword123}@host.docker.internal:6379/0
 
     AIRFLOW__CORE__FERNET_KEY: "Z0mPUdKS8tNudnXdTRw8I056wMQKrlCzIPtBvljkD-A="
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
@@ -120,48 +118,17 @@ services:
       start_period: 30s
     restart: always
 
-  airflow-worker:
-    <<: *airflow-common
-    container_name: airflow-worker
-    command: celery worker
-    depends_on:
-      airflow-init:
-        condition: service_completed_successfully
+  postgres:
+    image: postgres:16
+    container_name: postgres-db
     environment:
-      <<: *airflow-common-env
-      DUMB_INIT_SETSID: "0"
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - 'celery --app airflow.providers.celery.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}" || celery --app airflow.executors.celery_executor.app inspect ping -d "celery@$${HOSTNAME}"'
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-    restart: always
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
 
-  airflow-triggerer:
-    <<: *airflow-common
-    container_name: airflow-triggerer
-    command: triggerer
-    depends_on:
-      airflow-init:
-        condition: service_completed_successfully
-    healthcheck:
-      test: [ "CMD-SHELL", 'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"' ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-    restart: always
-
-  airflow-cli:
-    <<: *airflow-common
-    container_name: airflow-cli
-    profiles: [ "debug" ]
-    command: bash
-    tty: true
-    stdin_open: true
-    depends_on:
-      airflow-init:
-        condition: service_completed_successfully
+volumes:
+  pg_data:
