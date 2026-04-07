@@ -7,10 +7,10 @@ requires-python = ">=3.10"
 dependencies = [
     "alembic>=1.18.4",
     "apache-airflow>=3.1.8",
-
     "boto3>=1.42.73",
     "boto3-stubs~=1.42.73",
     "dotenv>=0.9.9",
+    "fastapi[standard]>=0.117.1",
     "grpcio>=1.48.0",
     "pandas>=2.3.3",
     "pandas-stubs~=2.3.3",
@@ -21,6 +21,7 @@ dependencies = [
     "pyspark==3.5.0",
     "requests>=2.33.0",
     "sqlalchemy>=2.0.47",
+    "streamlit>=1.56.0",
     "tqdm>=4.67.3",
     "urllib3>=2.6.3",
     "zstandard>=0.25.0",
