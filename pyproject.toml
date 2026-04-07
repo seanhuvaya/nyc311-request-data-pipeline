@@ -22,6 +22,7 @@ dependencies = [
     "requests>=2.33.0",
     "sqlalchemy>=2.0.47",
     "streamlit>=1.56.0",
+    "streamlit-shadcn-ui>=0.1.19",
     "tqdm>=4.67.3",
     "urllib3>=2.6.3",
     "zstandard>=0.25.0",
