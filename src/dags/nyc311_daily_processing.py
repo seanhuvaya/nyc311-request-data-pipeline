@@ -3,13 +3,13 @@ from datetime import datetime, timezone
 
 from airflow.sdk import dag, task, get_current_context
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col
 
-from src.pipeline.pipeline_logger import save_pipeline_step_run, get_latest_pipeline_step_run_by_step_name
 from src.db.models import PipelineStepRun
+from src.pipeline.pipeline_logger import save_pipeline_step_run, get_latest_pipeline_step_run_by_step_name
 from src.transform.processing import process_nyc311_daily_data
 from src.utils.config import settings
 from src.utils.s3_utils import upload_data_to_s3
+from src.utils.dag_utils import failure_callback
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +20,9 @@ logger = logging.getLogger(__name__)
     start_date=datetime(2026, 3, 28),
     catchup=False,
     tags=["nyc311", "etl"],
+    default_args={
+        "on_failure_callback": lambda context: failure_callback(context, step_name="transform"),
+    }
 )
 def nyc311_daily_processing():
     @task()

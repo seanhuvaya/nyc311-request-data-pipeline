@@ -122,6 +122,8 @@ sqlalchemy-jsonfield==1.0.2
 sqlalchemy-utils==0.42.1
 sqlparse==0.5.5
 starlette==0.48.0
+streamlit==1.56.0
+streamlit-shadcn-ui==0.1.19
 structlog==25.5.0
 svcs==25.1.0
 tabulate==0.10.0

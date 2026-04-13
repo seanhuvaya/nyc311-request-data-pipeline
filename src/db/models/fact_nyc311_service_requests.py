@@ -25,4 +25,4 @@ class NYC311ServiceRequest(Base):
     longitude = Column(Float, nullable=False)
 
     is_closed = Column(Boolean, nullable=False, default=False)
-    resolution_time_in_minutes = Column(Float)
+    resolution_time_in_hours = Column(Float)
