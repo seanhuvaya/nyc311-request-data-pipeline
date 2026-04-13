@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: myapp
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports: [ "5432:5432" ]
+    volumes: [ "postgres_data:/var/lib/postgresql/data" ]
+
+  airflow-webserver:
+    build: ./data-pipeline
+    command: webserver
+    ports: [ "8080:8080" ]
+    depends_on: [ postgres ]
+
+  airflow-scheduler:
+    build: ./data-pipeline
+    command: scheduler
+
+volumes:
+  postgres_data:
