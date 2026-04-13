@@ -3,3 +3,15 @@ from src.db.models.pipeline_step_run import PipelineStepRun
 from src.db.models.fact_nyc311_service_requests import NYC311ServiceRequest
 from src.db.models.gold_nyc311_requests_daily import NYC311RequestsDaily
 from src.db.models.gold_nyc311_requests_by_complaint_daily import NYC311RequestsByComplaintDaily
+from src.db.models.gold_nyc311_requests_by_agency_daily import NYC311RequestsByAgencyDaily
+from src.db.models.gold_nyc311_requests_geo_daily import NYC311RequestsGeoDaily
+from src.db.models.gold_nyc311_open_backlog_daily import NYC311OpenBacklogDaily
+from src.db.models.gold_nyc311_sla_performance_daily import NYC311SLAPerformanceDaily
+from src.db.models.gold_nyc311_top_complaints_monthly import NYC311TopComplaintsMonthly
+from src.db.models.gold_nyc311_resolution_time_distribution import NYC311ResolutionTimeDistribution
+from src.db.models.gold_nyc311_location_hotspots import NYC311LocationHotspots
+from src.db.models.gold_nyc311_request_fact import NYC311GoldRequestFact
+from src.db.models.dim_date import DimDate
+from src.db.models.dim_location import DimLocation
+from src.db.models.dim_complaint import DimComplaint
+from src.db.models.dim_agency import DimAgency

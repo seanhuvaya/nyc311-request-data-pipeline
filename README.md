@@ -42,3 +42,20 @@ Example with explicit API URL:
 ```bash
 API_BASE_URL=http://localhost:8000 uv run streamlit run src/web/app.py
 ```
+
+## Run Full Stack in Docker Compose
+
+The compose stack includes:
+- FastAPI (`http://localhost:8000`)
+- Streamlit (`http://localhost:8501`)
+- Airflow services (`airflow-init`, `airflow-apiserver`, `airflow-scheduler`, `airflow-dag-processor`)
+- Postgres
+
+Start everything:
+
+```bash
+docker compose up --build
+```
+
+Streamlit calls FastAPI over the compose network with:
+- `API_BASE_URL=http://fastapi:8000`

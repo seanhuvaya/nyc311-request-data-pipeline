@@ -43,6 +43,57 @@ x-airflow-common: &airflow-common
     - "host.docker.internal:host-gateway"
 
 services:
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    container_name: fastapi
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+      AWS_S3_DATA_PARQUET_FILENAME: ${AWS_S3_DATA_PARQUET_FILENAME}
+      PG_HOST: postgres
+      PG_PORT: 5432
+      PG_USER: ${PG_USER}
+      PG_PASSWORD: ${PG_PASSWORD}
+      PG_DATABASE: ${PG_DATABASE}
+      DATASET_URL: ${DATASET_URL}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_started
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "http://localhost:8000/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    container_name: streamlit
+    command: streamlit run src/web/app.py --server.port 8501 --server.address 0.0.0.0
+    environment:
+      API_BASE_URL: http://fastapi:8000
+    ports:
+      - "8501:8501"
+    depends_on:
+      fastapi:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "http://localhost:8501/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    restart: unless-stopped
+
   airflow-init:
     <<: *airflow-common
     container_name: airflow-init

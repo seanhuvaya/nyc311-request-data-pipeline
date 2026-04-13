@@ -5,8 +5,16 @@ from api_client import (
     ApiClientError,
     get_configured_base_url,
     get_requests,
+    get_requests_by_agency_daily,
     get_requests_by_complaint_type,
     get_requests_daily,
+    get_requests_geo_daily,
+    get_open_backlog_daily,
+    get_sla_performance_daily,
+    get_top_complaints_monthly,
+    get_resolution_time_distribution,
+    get_location_hotspots,
+    get_request_fact,
 )
 from ui import apply_shadcn_theme, dashboard_card, metric_cards, page_header, section_heading
 
@@ -47,6 +55,54 @@ def load_complaint_type_data() -> pd.DataFrame:
     if not data:
         return pd.DataFrame()
     return pd.DataFrame(data)
+
+
+@st.cache_data(ttl=300)
+def load_agency_daily_data() -> pd.DataFrame:
+    data = get_requests_by_agency_daily()
+    return pd.DataFrame(data) if data else pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_geo_daily_data() -> pd.DataFrame:
+    data = get_requests_geo_daily()
+    return pd.DataFrame(data) if data else pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_backlog_daily_data() -> pd.DataFrame:
+    data = get_open_backlog_daily()
+    return pd.DataFrame(data) if data else pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_sla_daily_data() -> pd.DataFrame:
+    data = get_sla_performance_daily()
+    return pd.DataFrame(data) if data else pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_top_complaints_monthly_data() -> pd.DataFrame:
+    data = get_top_complaints_monthly()
+    return pd.DataFrame(data) if data else pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_resolution_distribution_data() -> pd.DataFrame:
+    data = get_resolution_time_distribution()
+    return pd.DataFrame(data) if data else pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_location_hotspots_data() -> pd.DataFrame:
+    data = get_location_hotspots()
+    return pd.DataFrame(data) if data else pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_request_fact_data() -> pd.DataFrame:
+    data = get_request_fact()
+    return pd.DataFrame(data) if data else pd.DataFrame()
 
 
 def render_raw_requests_summary() -> None:
@@ -169,4 +225,65 @@ with page_cols[2]:
         content="Top complaint categories and resolution indicators",
         description="/api/v1/requests/by-complaint-type",
         key="page-complaint",
+    )
+
+section_heading("New Gold Endpoints")
+gold_cols_1 = st.columns(4)
+with gold_cols_1[0]:
+    dashboard_card(
+        title="Agency Performance",
+        content=f"{len(load_agency_daily_data())} rows",
+        description="/api/v1/requests/by-agency-daily",
+        key="gold-agency",
+    )
+with gold_cols_1[1]:
+    dashboard_card(
+        title="Geo Daily",
+        content=f"{len(load_geo_daily_data())} rows",
+        description="/api/v1/requests/geo-daily",
+        key="gold-geo",
+    )
+with gold_cols_1[2]:
+    dashboard_card(
+        title="Open Backlog",
+        content=f"{len(load_backlog_daily_data())} rows",
+        description="/api/v1/requests/open-backlog-daily",
+        key="gold-backlog",
+    )
+with gold_cols_1[3]:
+    dashboard_card(
+        title="SLA Performance",
+        content=f"{len(load_sla_daily_data())} rows",
+        description="/api/v1/requests/sla-performance-daily",
+        key="gold-sla",
+    )
+
+gold_cols_2 = st.columns(4)
+with gold_cols_2[0]:
+    dashboard_card(
+        title="Top Complaints Monthly",
+        content=f"{len(load_top_complaints_monthly_data())} rows",
+        description="/api/v1/requests/top-complaints-monthly",
+        key="gold-top-complaints",
+    )
+with gold_cols_2[1]:
+    dashboard_card(
+        title="Resolution Distribution",
+        content=f"{len(load_resolution_distribution_data())} rows",
+        description="/api/v1/requests/resolution-time-distribution",
+        key="gold-resolution-dist",
+    )
+with gold_cols_2[2]:
+    dashboard_card(
+        title="Location Hotspots",
+        content=f"{len(load_location_hotspots_data())} rows",
+        description="/api/v1/requests/location-hotspots",
+        key="gold-hotspots",
+    )
+with gold_cols_2[3]:
+    dashboard_card(
+        title="Request Fact",
+        content=f"{len(load_request_fact_data())} rows",
+        description="/api/v1/requests/request-fact",
+        key="gold-request-fact",
     )
