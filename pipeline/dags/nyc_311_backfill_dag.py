@@ -1,13 +1,11 @@
 import logging
 
 from airflow.sdk import dag, task
-from datetime import datetime
-
-from utils.logging import setup_logging
-
-from pyspark.sql import functions as F
 from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import functions as F
+from spark_jobs.gold.build_nyc311_requests_fact import build_nyc311_requests_fact
 from spark_jobs.session import get_spark_session
+from utils.logging import setup_logging
 
 setup_logging()
 
@@ -21,12 +19,6 @@ logger = logging.getLogger(__name__)
     tags=["nyc311", "historical", "backfill"],
 )
 def nyc_311_historical_backfill():
-    @task
-    def ensure_metadata():
-        from metadata.init import ensure_pipeline_tables
-        logger.info("Ensuring metadata tables exist")
-        ensure_pipeline_tables()
-
     @task
     def historical_backfill():
         from ingestion.historical_ingest import backfill_nyc311_requests
@@ -53,7 +45,16 @@ def nyc_311_historical_backfill():
 
         enriched_df.write.mode("overwrite").partitionBy("date").parquet("s3a://nyc311-data/silver/")
 
-    ensure_metadata() >> historical_backfill() >> transform_and_save_requests()
+    @task
+    def build_gold_nyc311_requests_fact():
+        spark = get_spark_session(app_name="nyc_311_historical_backfill", s3_endpoint="http://minio:9000",
+                                  access_key="changemeuser", secret_key="changemepass")
+        spark.sparkContext.setLogLevel("WARN")
+        spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
+
+        build_nyc311_requests_fact(spark)
+
+    historical_backfill() >> transform_and_save_requests() >> build_gold_nyc311_requests_fact()
 
 
 nyc_311_historical_backfill()
