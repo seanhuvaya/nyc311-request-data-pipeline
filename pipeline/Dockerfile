@@ -6,9 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     AIRFLOW_HOME=/opt/airflow \
-    JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 \
-    SPARK_HOME=/opt/spark \
-    PATH="/usr/local/bin:/opt/spark/bin:/opt/spark/sbin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin"
+    SPARK_HOME=/opt/spark
 
 WORKDIR /opt/airflow
 
@@ -17,29 +15,36 @@ RUN apt-get update && \
         bash \
         curl \
         procps \
-        openjdk-17-jre-headless \
+        openjdk-17-jdk-headless \
         libpq-dev \
         gcc \
         g++ && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# Create a stable JAVA_HOME symlink based on the actual installed java location
+RUN REAL_JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(which java)")")")" && \
+    echo "Detected JAVA_HOME=${REAL_JAVA_HOME}" && \
+    mkdir -p /usr/lib/jvm && \
+    ln -sfn "${REAL_JAVA_HOME}" /usr/lib/jvm/java-17-openjdk && \
+    ls -la /usr/lib/jvm/java-17-openjdk/bin/java
+
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk
+ENV PATH="${JAVA_HOME}/bin:/usr/local/bin:/opt/spark/bin:/opt/spark/sbin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin"
+
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Copy only dependency files first for better layer caching
 COPY pyproject.toml uv.lock ./
 
-# Install dependencies from pyproject.toml into system Python
 RUN uv pip install --system -r pyproject.toml
 
-ENV SPARK_VERSION=3.5.8
+ENV SPARK_VERSION=4.1.1
 RUN mkdir -p ${SPARK_HOME} && \
     curl -fL -o /tmp/spark.tgz \
       https://dlcdn.apache.org/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop3.tgz && \
     tar xzf /tmp/spark.tgz --directory ${SPARK_HOME} --strip-components 1 && \
     rm /tmp/spark.tgz
 
-# Copy the rest of the project
 COPY . /opt/airflow
 
 RUN useradd -ms /bin/bash -u 50000 airflow && \
