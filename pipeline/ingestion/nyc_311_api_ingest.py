@@ -6,6 +6,8 @@ import boto3
 import pandas as pd
 from botocore.client import Config
 
+from utils.http import get_session_with_retry
+
 BASE_URL = "https://data.cityofnewyork.us/resource/erm2-nwe9.csv"
 
 S3_CLIENT = boto3.client(
@@ -34,7 +36,9 @@ def extract_nyc311_requests_since(extraction_date: datetime, start_date: datetim
             f"&$order=created_date DESC"
         )
 
-        response = requests.get(url, timeout=60)
+        session = get_session_with_retry()
+
+        response = session.get(url, timeout=60)
         response.raise_for_status()
 
         csv_buffer = StringIO(response.text)

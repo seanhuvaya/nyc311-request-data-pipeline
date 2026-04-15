@@ -55,6 +55,9 @@ def nyc_311_historical_backfill():
         spark.sparkContext.setLogLevel("WARN")
         spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
 
+        df = spark.read.parquet("s3a://nyc311-data/silver/historical/")
+        df.printSchema()
+
     historical_backfill() >> transform_and_save_requests() >> build_gold_nyc311_requests_daily()
 
 
