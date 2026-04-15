@@ -1,9 +1,7 @@
-import os
 import logging
 
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
-
 from utils.spark import load_to_postgres
 
 logger = logging.getLogger(__name__)
@@ -21,6 +19,8 @@ def build_nyc311_requests_daily(df: DataFrame):
     df_daily = df_daily \
         .withColumn("pct_closure_daily", F.round((F.col("closed_count") / F.col("total_count")) * 100, 2))
 
-    load_to_postgres(df_daily, "gold.nyc311_requests_daily")
+    load_to_postgres(df, "staging.nyc311_requests_daily", truncate=True)
+    logger.info(f"Loaded {df.count()} rows to staging.nyc311_requests_daily")
 
-    logger.info(f"Loaded {df_daily.count()} rows to gold.nyc311_requests_daily")
+    load_to_postgres(df_daily, "staging.nyc311_requests_daily_summary", truncate=True)
+    logger.info(f"Loaded {df_daily.count()} rows to staging.nyc311_requests_daily_summary")

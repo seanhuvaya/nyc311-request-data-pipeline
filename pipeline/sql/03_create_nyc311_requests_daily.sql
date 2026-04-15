@@ -1,11 +1,49 @@
-CREATE TABLE IF NOT EXISTS gold.nyc311_requests_daily (
-    request_date DATE NOT NULL,
-    closed_count INT NOT NULL,
-    open_count INT NOT NULL,
-    total_count INT NOT NULL,
-    avg_resolution_time_in_hours NUMERIC(10,2),
-    median_resolution_time_in_hours NUMERIC(10,2),
-    pct_closure_daily NUMERIC(10,2),
+CREATE TABLE IF NOT EXISTS staging.nyc311_requests_daily
+(
+    unique_key               BIGINT PRIMARY KEY,
+    created_date             TIMESTAMP NOT NULL,
+    closed_date              TIMESTAMP NULL,
+    date                     DATE      NOT NULL,
+    agency                   TEXT,
+    complaint_type           TEXT,
+    descriptor               TEXT,
+    community_board          TEXT,
+    incident_zip             VARCHAR(10),
+    location_type            TEXT,
+    address_type             TEXT,
+    city                     TEXT,
+    borough                  TEXT,
+    status                   TEXT,
+    council_district         INTEGER,
+    police_precinct          TEXT,
+    latitude                 DOUBLE PRECISION,
+    longitude                DOUBLE PRECISION,
+    is_closed                BOOLEAN   NOT NULL DEFAULT FALSE,
+    resolution_time_in_hours NUMERIC(10, 2),
+    created_at               TIMESTAMP          DEFAULT CURRENT_TIMESTAMP
+);
 
-    PRIMARY KEY (request_date)
-)
+CREATE TABLE IF NOT EXISTS gold.nyc311_requests_daily
+(
+    unique_key               BIGINT PRIMARY KEY,
+    created_date             TIMESTAMP NOT NULL,
+    closed_date              TIMESTAMP NULL,
+    date                     DATE      NOT NULL,
+    agency                   TEXT,
+    complaint_type           TEXT,
+    descriptor               TEXT,
+    community_board          TEXT,
+    incident_zip             VARCHAR(10),
+    location_type            TEXT,
+    address_type             TEXT,
+    city                     TEXT,
+    borough                  TEXT,
+    status                   TEXT,
+    council_district         INTEGER,
+    police_precinct          TEXT,
+    latitude                 DOUBLE PRECISION,
+    longitude                DOUBLE PRECISION,
+    is_closed                BOOLEAN   NOT NULL DEFAULT FALSE,
+    resolution_time_in_hours NUMERIC(10, 2),
+    created_at               TIMESTAMP          DEFAULT CURRENT_TIMESTAMP
+);

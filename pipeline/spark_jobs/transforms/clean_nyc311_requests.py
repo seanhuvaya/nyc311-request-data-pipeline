@@ -75,10 +75,15 @@ def clean_nyc311_requests(df: DataFrame):
         .withColumn("latitude", F.col("latitude").cast(FloatType())) \
         .withColumn("longitude", F.col("longitude").cast(FloatType())) \
         .withColumn("unique_key", F.col("unique_key").cast(IntegerType())) \
-        .withColumn("incident_zip", F.col("incident_zip").cast(IntegerType()))
+        .withColumn("incident_zip", F.col("incident_zip").cast(IntegerType())) \
+        .withColumn("council_district", F.col("council_district").cast(IntegerType()))
 
     df = df.drop(*COLUMNS_TO_DROP)
     logger.info(f"Dropped {len(COLUMNS_TO_DROP)} columns")
+
+    logger.info(f"Number of rows after cleaning: {df.count()}")
+    df = df.dropDuplicates(['unique_key']) # TODO keep latest record
+    logger.info(f"Number of unique rows after dropping duplicates: {df.count()}")
 
     df = impute_categorical_fields(df)
     return impute_coordinates(df)
