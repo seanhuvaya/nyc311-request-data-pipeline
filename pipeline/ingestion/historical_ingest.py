@@ -9,7 +9,8 @@ def backfill_nyc311_requests():
 
     latest_created_date = extract_nyc311_requests_since(
         extraction_date=backfill_date,
-        start_date=backfill_start_date
+        start_date=backfill_start_date,
+        is_backfill=True
     )
 
     update_metadata(pipeline_name="nyc_311", source_name="erm2-nwe9", watermark_column="created_date",

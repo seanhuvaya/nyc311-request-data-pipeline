@@ -18,7 +18,8 @@ S3_CLIENT = boto3.client(
 )
 
 
-def extract_nyc311_requests_since(extraction_date: datetime, start_date: datetime, limit: int = 1000, offset: int = 0):
+def extract_nyc311_requests_since(extraction_date: datetime, start_date: datetime, is_backfill: bool = False,
+                                  limit: int = 1000, offset: int = 0):
     latest_created_date = start_date
     start_date = start_date.strftime("%Y-%m-%dT00:00:00")
 
@@ -47,7 +48,9 @@ def extract_nyc311_requests_since(extraction_date: datetime, start_date: datetim
 
         latest_created_date = max(latest_created_date, chunk["created_date"].max())
 
-        s3_key = f"raw/date={extraction_date.strftime('%Y-%m-%d')}/nyc_311_requests_offset_{offset}.csv"
+        s3_key = f"raw/historical/nyc_311_requests_offset_{offset}.csv" if is_backfill else \
+            f"raw/daily/date={extraction_date.strftime('%Y-%m-%d')}/nyc_311_requests_offset_{offset}.csv"
+
         S3_CLIENT.put_object(Body=csv_buffer.getvalue(), Bucket="nyc311-data", Key=s3_key)
 
         offset += limit

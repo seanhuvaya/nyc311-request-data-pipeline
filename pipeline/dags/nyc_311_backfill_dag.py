@@ -3,7 +3,6 @@ import logging
 from airflow.sdk import dag, task
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
-from spark_jobs.gold.build_nyc311_requests_fact import build_nyc311_requests_fact
 from spark_jobs.session import get_spark_session
 from utils.logging import setup_logging
 
@@ -36,25 +35,27 @@ def nyc_311_historical_backfill():
         spark.sparkContext.setLogLevel("WARN")
         spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
 
-        cleaned_df = clean_nyc311_requests(spark)
+        df = spark.read.csv(f"s3a://nyc311-data/raw/historical/*.csv",
+                            header=True,
+                            inferSchema=True)
+
+        cleaned_df = clean_nyc311_requests(df)
         enriched_df = enrich_nyc311_requests(cleaned_df)
 
         enriched_df = enriched_df.withColumn("date", F.to_date("created_date"))
 
         logger.info(f"partitions before write: {enriched_df.rdd.getNumPartitions()}")
 
-        enriched_df.write.mode("overwrite").partitionBy("date").parquet("s3a://nyc311-data/silver/")
+        enriched_df.write.mode("overwrite").partitionBy("date").parquet("s3a://nyc311-data/silver/historical/")
 
     @task
-    def build_gold_nyc311_requests_fact():
+    def build_gold_nyc311_requests_daily():
         spark = get_spark_session(app_name="nyc_311_historical_backfill", s3_endpoint="http://minio:9000",
                                   access_key="changemeuser", secret_key="changemepass")
         spark.sparkContext.setLogLevel("WARN")
         spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
 
-        build_nyc311_requests_fact(spark)
-
-    historical_backfill() >> transform_and_save_requests() >> build_gold_nyc311_requests_fact()
+    historical_backfill() >> transform_and_save_requests() >> build_gold_nyc311_requests_daily()
 
 
 nyc_311_historical_backfill()

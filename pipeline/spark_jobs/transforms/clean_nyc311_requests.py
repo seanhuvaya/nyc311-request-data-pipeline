@@ -1,10 +1,8 @@
 import logging
-from datetime import datetime, timezone
 
 from pyspark.sql import DataFrame, Window, SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import FloatType, IntegerType
-
 from spark_jobs.session import get_spark_session
 
 COLUMNS_TO_DROP = [
@@ -68,12 +66,7 @@ def impute_coordinates(df: DataFrame) -> DataFrame:
     return df.drop(*['zip_latitude', 'zip_longitude', 'cb_latitude', 'cb_longitude'])
 
 
-def clean_nyc311_requests(spark: SparkSession):
-    df = spark.read.csv(f"s3a://nyc311-data/raw/date={datetime.now(timezone.utc).strftime('%Y-%m-%d')}/*.csv",
-                        header=True,
-                        inferSchema=True)
-
-    logger.info(f"Loaded {df.count()} rows")
+def clean_nyc311_requests(df: DataFrame):
     logger.info("Casting columns to correct types")
     df = df \
         .withColumn("created_date", F.to_timestamp("created_date", "yyyy-MM-dd'T'HH:mm:ss.SSS")) \
