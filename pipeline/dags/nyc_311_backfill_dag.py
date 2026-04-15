@@ -1,7 +1,6 @@
 import logging
 
 from airflow.sdk import dag, task
-from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from spark_jobs.session import get_spark_session
 from utils.logging import setup_logging
@@ -48,15 +47,20 @@ def nyc_311_historical_backfill():
 
         enriched_df.write.mode("overwrite").partitionBy("date").parquet("s3a://nyc311-data/silver/historical/")
 
+        spark.stop()
+
     @task
     def build_gold_nyc311_requests_daily():
+        from spark_jobs.gold.build_nyc311_requests_daily import build_nyc311_requests_daily
         spark = get_spark_session(app_name="nyc_311_historical_backfill", s3_endpoint="http://minio:9000",
                                   access_key="changemeuser", secret_key="changemepass")
         spark.sparkContext.setLogLevel("WARN")
         spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
 
         df = spark.read.parquet("s3a://nyc311-data/silver/historical/")
-        df.printSchema()
+        build_nyc311_requests_daily(df)
+
+        spark.stop()
 
     historical_backfill() >> transform_and_save_requests() >> build_gold_nyc311_requests_daily()
 

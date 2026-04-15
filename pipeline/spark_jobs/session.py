@@ -6,12 +6,13 @@ def get_spark_session(
         s3_endpoint: str = None,
         access_key: str = None,
         secret_key: str = None,
-        use_ssl: bool = False,
+        use_ssl: bool = False
 ) -> SparkSession:
     session_builder = SparkSession.builder.appName(app_name).master("local[*]")
 
     if s3_endpoint:
-        session_builder.config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:3.4.1")
+        session_builder.config("spark.jars.packages",
+                               "org.apache.hadoop:hadoop-aws:3.4.2,org.postgresql:postgresql:42.7.3")
         session_builder.config("spark.hadoop.fs.s3a.endpoint", s3_endpoint)
         session_builder.config("spark.hadoop.fs.s3a.access.key", access_key)
         session_builder.config("spark.hadoop.fs.s3a.secret.key", secret_key)

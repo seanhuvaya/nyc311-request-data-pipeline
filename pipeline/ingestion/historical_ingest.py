@@ -5,7 +5,7 @@ from metadata.service import update_metadata
 
 def backfill_nyc311_requests():
     backfill_date = datetime.now()
-    backfill_start_date = datetime(2026, 4, 1)
+    backfill_start_date = datetime(2026, 4, 12)
 
     latest_created_date = extract_nyc311_requests_since(
         extraction_date=backfill_date,
