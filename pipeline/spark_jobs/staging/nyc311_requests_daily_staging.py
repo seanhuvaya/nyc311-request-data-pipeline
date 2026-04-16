@@ -2,12 +2,13 @@ import logging
 
 from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
+
 from utils.spark import load_to_postgres
 
 logger = logging.getLogger(__name__)
 
 
-def build_nyc311_requests_daily(df: DataFrame):
+def build_nyc311_requests_daily_staging_tables(df: DataFrame):
     df_daily = df.withColumn("request_date", F.to_date('created_date')) \
         .groupBy("request_date") \
         .agg(F.sum(F.when(F.col("is_closed"), 1).otherwise(0)).alias("closed_count"),

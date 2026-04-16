@@ -50,19 +50,24 @@ def nyc_311_historical_backfill():
         spark.stop()
 
     @task
-    def build_gold_nyc311_requests_daily():
-        from spark_jobs.gold.build_nyc311_requests_daily import build_nyc311_requests_daily
+    def build_staging_nyc311_requests_daily():
+        from spark_jobs.staging.nyc311_requests_daily_staging import build_nyc311_requests_daily_staging_tables
         spark = get_spark_session(app_name="nyc_311_historical_backfill", s3_endpoint="http://minio:9000",
                                   access_key="changemeuser", secret_key="changemepass")
         spark.sparkContext.setLogLevel("WARN")
         spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
 
         df = spark.read.parquet("s3a://nyc311-data/silver/historical/")
-        build_nyc311_requests_daily(df)
+        build_nyc311_requests_daily_staging_tables(df)
 
         spark.stop()
 
-    historical_backfill() >> transform_and_save_requests() >> build_gold_nyc311_requests_daily()
+    @task
+    def build_gold_nyc311_requests_daily():
+        from spark_jobs.gold.nyc311_requests_daily_gold import build_gold_nyc311_requests_daily
+        build_gold_nyc311_requests_daily()
+
+    historical_backfill() >> transform_and_save_requests() >> build_staging_nyc311_requests_daily() >> build_gold_nyc311_requests_daily()
 
 
 nyc_311_historical_backfill()

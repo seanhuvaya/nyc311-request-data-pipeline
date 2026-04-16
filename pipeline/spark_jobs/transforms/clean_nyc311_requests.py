@@ -81,9 +81,6 @@ def clean_nyc311_requests(df: DataFrame):
     df = df.drop(*COLUMNS_TO_DROP)
     logger.info(f"Dropped {len(COLUMNS_TO_DROP)} columns")
 
-    logger.info(f"Number of rows after cleaning: {df.count()}")
-    df = df.dropDuplicates(['unique_key']) # TODO keep latest record
-    logger.info(f"Number of unique rows after dropping duplicates: {df.count()}")
-
+    df = df.dropDuplicates(['unique_key'])
     df = impute_categorical_fields(df)
     return impute_coordinates(df)

@@ -50,8 +50,8 @@ def nyc_311_daily_ingest():
         spark.stop()
 
     @task
-    def build_gold_nyc311_requests_daily():
-        from spark_jobs.gold.build_nyc311_requests_daily import build_nyc311_requests_daily
+    def build_staging_nyc311_requests_daily():
+        from spark_jobs.staging.nyc311_requests_daily_staging import build_nyc311_requests_daily_staging_tables
         spark = get_spark_session(app_name="nyc_311_historical_backfill", s3_endpoint="http://minio:9000",
                                   access_key="changemeuser", secret_key="changemepass")
         spark.sparkContext.setLogLevel("WARN")
@@ -59,11 +59,11 @@ def nyc_311_daily_ingest():
 
         date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
         df = spark.read.parquet(f"s3a://nyc311-data/silver/daily/date={date}/")
-        build_nyc311_requests_daily(df)
+        build_nyc311_requests_daily_staging_tables(df)
 
         spark.stop()
 
-    incremental_ingest() >> transform_and_save_requests() >> build_gold_nyc311_requests_daily()
+    incremental_ingest() >> transform_and_save_requests() >> build_staging_nyc311_requests_daily()
 
 
 nyc_311_daily_ingest()

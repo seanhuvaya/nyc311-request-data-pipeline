@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 from functools import lru_cache
 
 from sqlalchemy import text
@@ -17,9 +17,10 @@ def get_db_engine():
     return create_engine(db_url, pool_pre_ping=True, future=True)
 
 
-def truncate_table(table_name: str):
+def run_sql_statements(*sql_statements: str) -> None:
     engine = get_db_engine()
 
     with engine.connect() as conn:
-        conn.execute(text(f"TRUNCATE TABLE {table_name}"))
-        conn.commit()
+        for sql in sql_statements:
+            conn.execute(text(sql))
+            conn.commit()
