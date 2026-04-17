@@ -20,6 +20,7 @@ x-common-env: &common-env
   AIRFLOW_ADMIN_LASTNAME: ${AIRFLOW_ADMIN_LASTNAME:-admin}
   AIRFLOW_ADMIN_EMAIL: ${AIRFLOW_ADMIN_EMAIL:-admin@airflow.com}
 
+  AIRFLOW_UID: 50000
   AIRFLOW_HOME: /opt/airflow
   PYTHONPATH: /opt/airflow
   AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
