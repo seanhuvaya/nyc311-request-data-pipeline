@@ -1,0 +1,16 @@
+[project]
+name = "Pipeline"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "apache-airflow>=3.2.0",
+    "apache-airflow-providers-fab>=3.6.1",
+    "apache-airflow-providers-postgres>=6.6.3",
+    "boto3>=1.42.88",
+    "pandas>=3.0.2",
+    "pyspark==4.1.1",
+    "sqlmodel>=0.0.38",
+    "urllib3>=2.6.3",
+]

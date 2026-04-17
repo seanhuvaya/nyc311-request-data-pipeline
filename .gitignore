@@ -8,10 +8,11 @@ __pycache__/
 # Data
 raw/*
 processed/*
-logs/*
+logs
 
 # Airflow
 airflow.db
+airflow.cfg
 *.log
 
 # Spark

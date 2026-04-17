@@ -1,0 +1,119 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    environment:
+      POSTGRES_DB: nyc311
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./pipeline/sql:/docker-entrypoint-initdb.d
+
+  airflow-init:
+    build:
+      context: ./pipeline
+      dockerfile: Dockerfile
+    container_name: airflow-init
+    depends_on:
+      - postgres
+    volumes:
+      - ./pipeline:/opt/airflow
+    environment:
+      AIRFLOW_HOME: /opt/airflow
+      PYTHONPATH: /opt/airflow
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:postgres@postgres:5432/airflow
+      APP_DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/nyc311
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-api-server:8080/execution/
+    command: >
+      bash -c "
+        airflow db migrate &&
+        airflow users create --username admin --password seanhuvaya --firstname Sean --lastname Huvaya --role Admin --email sean@gmail.com
+      "
+
+  airflow-api-server:
+    build:
+      context: ./pipeline
+      dockerfile: Dockerfile
+    container_name: airflow-api-server
+    depends_on:
+      - postgres
+      - airflow-init
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./pipeline:/opt/airflow
+    environment:
+      AIRFLOW_HOME: /opt/airflow
+      PYTHONPATH: /opt/airflow
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+      APP_DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/nyc311
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:postgres@postgres:5432/airflow
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-api-server:8080/execution/
+    command: airflow api-server --port 8080
+
+  airflow-scheduler:
+    build:
+      context: ./pipeline
+      dockerfile: Dockerfile
+    container_name: airflow-scheduler
+    depends_on:
+      - postgres
+      - airflow-init
+    volumes:
+      - ./pipeline:/opt/airflow
+    environment:
+      AIRFLOW_HOME: /opt/airflow
+      PYTHONPATH: /opt/airflow
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+      APP_DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/nyc311
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:postgres@postgres:5432/airflow
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-api-server:8080/execution/
+    command: airflow scheduler
+
+  airflow-dag-processor:
+    build:
+      context: ./pipeline
+      dockerfile: Dockerfile
+    container_name: airflow-dag-processor
+    depends_on:
+      - postgres
+      - airflow-init
+    volumes:
+      - ./pipeline:/opt/airflow
+    environment:
+      AIRFLOW_HOME: /opt/airflow
+      PYTHONPATH: /opt/airflow
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+      APP_DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/nyc311
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:postgres@postgres:5432/airflow
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-api-server:8080/execution/
+    command: airflow dag-processor
+
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: changemeuser
+      MINIO_ROOT_PASSWORD: changemepass
+    volumes:
+      - data_minio:/data
+    command: [ "server", "/data", "--console-address", ":9001" ]
+
+volumes:
+  postgres_data:
+  data_minio:
