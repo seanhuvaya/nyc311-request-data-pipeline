@@ -114,6 +114,22 @@ services:
       - data_minio:/data
     command: [ "server", "/data", "--console-address", ":9001" ]
 
+  minio-init:
+    image: minio/mc:latest
+    container_name: minio-init
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 changemeuser changemepass; do
+        echo 'waiting for minio...';
+        sleep 2;
+      done;
+      mc ready local;
+      mc mb -p local/nyc311-data || true;
+      mc ls local;
+      "
+
 volumes:
   postgres_data:
   data_minio:
