@@ -63,7 +63,12 @@ def nyc_311_daily_ingest():
 
         spark.stop()
 
-    incremental_ingest() >> transform_and_save_requests() >> build_staging_nyc311_requests_daily()
+    @task
+    def build_gold_nyc311_requests_daily():
+        from spark_jobs.gold.nyc311_requests_daily_gold import build_gold_nyc311_requests_daily
+        build_gold_nyc311_requests_daily()
+
+    incremental_ingest() >> transform_and_save_requests() >> build_staging_nyc311_requests_daily() >> build_gold_nyc311_requests_daily()
 
 
 nyc_311_daily_ingest()

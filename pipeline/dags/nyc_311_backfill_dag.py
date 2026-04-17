@@ -1,4 +1,5 @@
 import logging
+from datetime import timedelta
 
 from airflow.sdk import dag, task
 from pyspark.sql import functions as F
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 @dag(
     dag_id="nyc_311_historical_backfill",
-    schedule="@once",
+    schedule=None,
     catchup=False,
     tags=["nyc311", "historical", "backfill"],
 )
@@ -23,7 +24,7 @@ def nyc_311_historical_backfill():
         logger.info("Running historical backfill")
         backfill_nyc311_requests()
 
-    @task
+    @task(retries=3, retry_delay=timedelta(minutes=1), retry_exponential_backoff=True)
     def transform_and_save_requests():
         from spark_jobs.transforms.clean_nyc311_requests import clean_nyc311_requests
         from spark_jobs.transforms.enrich_nyc311_requests import enrich_nyc311_requests

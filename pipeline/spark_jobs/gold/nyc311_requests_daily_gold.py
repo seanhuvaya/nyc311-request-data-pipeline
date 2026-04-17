@@ -80,18 +80,61 @@ MERGE_REQUESTS_DAILY_SUMMARY_SQL = """
                                            open_count                      = COALESCE(EXCLUDED.open_count, g.open_count),
                                            avg_resolution_time_in_hours    = COALESCE(
                                                    EXCLUDED.avg_resolution_time_in_hours,
-                                                   g.avg_resolution_time_in_hours
-                                                                             ),
+                                                   g.avg_resolution_time_in_hours),
                                            median_resolution_time_in_hours = COALESCE(
                                                    EXCLUDED.median_resolution_time_in_hours,
-                                                   g.median_resolution_time_in_hours
-                                                                             ),
+                                                   g.median_resolution_time_in_hours),
                                            total_count                     = COALESCE(EXCLUDED.total_count, g.total_count),
-                                           pct_closure_daily               = COALESCE(
-                                                   EXCLUDED.pct_closure_daily,
-                                                   g.pct_closure_daily
-                                                                             ); \
+                                           pct_closure_daily               = COALESCE(EXCLUDED.pct_closure_daily, g.pct_closure_daily);
                                    """
+
+MERGE_REQUESTS_WEEKLY_SUMMARY_SQL = """
+                                    INSERT INTO gold.nyc311_requests_weekly_summary AS g (week_start,
+                                                                                          week_closed_requests,
+                                                                                          week_total_requests,
+                                                                                          week_closed_requests_pct,
+                                                                                          week_avg_resolution_time_in_hours,
+                                                                                          prev_week_total_requests,
+                                                                                          prev_week_total_closed_requests,
+                                                                                          prev_week_change_in_requests_pct,
+                                                                                          prev_week_change_in_closed_requests_pct,
+                                                                                          prev_week_avg_resolution_time_in_hours,
+                                                                                          prev_week_avg_resolution_time_in_hours_pct)
+                                    SELECT s.week_start,
+                                           s.week_closed_requests,
+                                           s.week_total_requests,
+                                           s.week_closed_requests_pct,
+                                           s.week_avg_resolution_time_in_hours,
+                                           s.prev_week_total_requests,
+                                           s.prev_week_total_closed_requests,
+                                           s.prev_week_change_in_requests_pct,
+                                           s.prev_week_change_in_closed_requests_pct,
+                                           s.prev_week_avg_resolution_time_in_hours,
+                                           s.prev_week_avg_resolution_time_in_hours_pct
+                                    FROM staging.nyc311_requests_weekly_summary s
+                                    ON CONFLICT (week_start) DO UPDATE
+                                        SET week_closed_requests                       = COALESCE(EXCLUDED.week_closed_requests),
+                                            week_total_requests                        = COALESCE(EXCLUDED.week_total_requests),
+                                            week_closed_requests_pct                   = COALESCE(EXCLUDED.week_closed_requests_pct),
+                                            week_avg_resolution_time_in_hours          = COALESCE(EXCLUDED.week_avg_resolution_time_in_hours),
+                                            prev_week_total_closed_requests            = COALESCE(
+                                                    EXCLUDED.prev_week_total_closed_requests,
+                                                    g.prev_week_total_closed_requests),
+                                            prev_week_total_requests                   = COALESCE(
+                                                    EXCLUDED.prev_week_total_requests, g.prev_week_total_requests),
+                                            prev_week_change_in_requests_pct           = COALESCE(
+                                                    EXCLUDED.prev_week_change_in_requests_pct,
+                                                    g.prev_week_change_in_requests_pct),
+                                            prev_week_change_in_closed_requests_pct    = COALESCE(
+                                                    EXCLUDED.prev_week_change_in_closed_requests_pct,
+                                                    g.prev_week_change_in_closed_requests_pct),
+                                            prev_week_avg_resolution_time_in_hours     = COALESCE(
+                                                    EXCLUDED.prev_week_avg_resolution_time_in_hours,
+                                                    g.prev_week_avg_resolution_time_in_hours),
+                                            prev_week_avg_resolution_time_in_hours_pct = COALESCE(
+                                                    EXCLUDED.prev_week_avg_resolution_time_in_hours_pct,
+                                                    g.prev_week_avg_resolution_time_in_hours_pct);
+                                    """
 
 
 def merge_requests_daily_to_gold() -> None:
@@ -102,6 +145,11 @@ def merge_requests_daily_summary_to_gold() -> None:
     run_sql_statements(MERGE_REQUESTS_DAILY_SUMMARY_SQL)
 
 
+def merge_requests_weekly_summary_to_gold() -> None:
+    run_sql_statements(MERGE_REQUESTS_WEEKLY_SUMMARY_SQL)
+
+
 def build_gold_nyc311_requests_daily() -> None:
     merge_requests_daily_to_gold()
     merge_requests_daily_summary_to_gold()
+    merge_requests_weekly_summary_to_gold()
