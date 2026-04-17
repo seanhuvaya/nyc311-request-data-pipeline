@@ -81,6 +81,7 @@ services:
     build:
       context: ./pipeline
       dockerfile: Dockerfile
+    user: "${AIRFLOW_UID:-50000}:0"
     container_name: airflow-api-server
     restart: unless-stopped
     depends_on:
@@ -106,6 +107,7 @@ services:
     build:
       context: ./pipeline
       dockerfile: Dockerfile
+    user: "${AIRFLOW_UID:-50000}:0"
     container_name: airflow-scheduler
     restart: unless-stopped
     depends_on:
@@ -123,6 +125,7 @@ services:
     build:
       context: ./pipeline
       dockerfile: Dockerfile
+    user: "${AIRFLOW_UID:-50000}:0"
     container_name: airflow-dag-processor
     restart: unless-stopped
     depends_on:
