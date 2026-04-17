@@ -166,6 +166,28 @@ services:
       "
     restart: "no"
 
+  nyc311-backend-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nyc311-backend-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      <<: *common-env
+      DATABASE_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8000/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
 volumes:
   postgres_data:
   data_minio:
