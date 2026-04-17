@@ -8,10 +8,12 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Upload project to VPS temp folder
         uses: appleboy/scp-action@v1
@@ -23,7 +25,6 @@ jobs:
           source: "."
           target: "~/nyc311-pipeline/deploy_tmp"
           rm: true
-          strip_components: 0
 
       - name: Move project into app folder and deploy
         uses: appleboy/ssh-action@v1.2.0
@@ -40,19 +41,15 @@ jobs:
             LIVE_DIR=$APP_DIR/app
 
             mkdir -p "$LIVE_DIR"
-
             shopt -s dotglob nullglob
 
-            # Clear old app files except persistent env if you want to keep it
             find "$LIVE_DIR" -mindepth 1 -maxdepth 1 ! -name '.env' -exec rm -rf {} +
 
-            # Move uploaded files into live dir
             if [ -d "$TMP_DIR" ]; then
               mv "$TMP_DIR"/* "$LIVE_DIR"/
               rm -rf "$TMP_DIR"
             fi
 
-            # Write .env file
             cat > "$LIVE_DIR/.env" <<EOF
             DB_NAME=${{ secrets.DB_NAME }}
             DB_USER=${{ secrets.DB_USER }}
@@ -72,9 +69,8 @@ jobs:
             EOF
 
             cd "$LIVE_DIR"
-
             docker compose down || true
             docker compose up -d --build
-
             docker compose ps
+
             echo "Pipeline deployment complete"
