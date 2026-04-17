@@ -1,76 +1,45 @@
-name: Deploy Pipeline to VPS
+name: Deploy to VPS
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches: [ main ]
+  workflow_dispatch:   # Allows manual trigger from GitHub UI
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
+      - name: Checkout code (just to trigger the workflow)
+        uses: actions/checkout@v4
 
-      - name: Upload project to VPS temp folder
-        uses: appleboy/scp-action@v1
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT }}
-          source: "."
-          target: "~/nyc311-pipeline/deploy_tmp"
-          rm: true
-
-      - name: Move project into app folder and deploy
-        uses: appleboy/ssh-action@v1.2.0
+      - name: Deploy via SSH (Git Pull + Docker Compose)
+        uses: appleboy/ssh-action@v1.3.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
           script: |
-            set -e
+            set -euo pipefail
 
-            APP_DIR=~/nyc311-pipeline
-            TMP_DIR=$APP_DIR/deploy_tmp
-            LIVE_DIR=$APP_DIR/app
+            echo "🚀 Starting deployment at $(date)"
 
-            mkdir -p "$LIVE_DIR"
-            shopt -s dotglob nullglob
+            # Go to your project directory
+            cd ~/nyc311-request-data-pipeline
 
-            find "$LIVE_DIR" -mindepth 1 -maxdepth 1 ! -name '.env' -exec rm -rf {} +
+            # Fetch latest changes
+            echo "📥 Pulling latest code from GitHub..."
+            git fetch --all
+            git reset --hard origin/main
+            git clean -fd   # Remove untracked files/folders if any
 
-            if [ -d "$TMP_DIR" ]; then
-              mv "$TMP_DIR"/* "$LIVE_DIR"/
-              rm -rf "$TMP_DIR"
-            fi
+            # Deploy with Docker Compose
+            echo "🐳 Rebuilding and starting containers..."
+            docker compose pull --quiet || true
+            docker compose down --remove-orphans || true
+            docker compose up -d --build --force-recreate
 
-            cat > "$LIVE_DIR/.env" <<EOF
-            DB_NAME=${{ secrets.DB_NAME }}
-            DB_USER=${{ secrets.DB_USER }}
-            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-            DB_HOST=${{ secrets.DB_HOST }}
-            DB_PORT=${{ secrets.DB_PORT }}
-            DATASET_URL=${{ secrets.DATASET_URL }}
-            AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
-            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
-            S3_ENDPOINT_URL=${{ secrets.S3_ENDPOINT_URL }}
-            S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
-            AIRFLOW_ADMIN_USER=${{ secrets.AIRFLOW_ADMIN_USER }}
-            AIRFLOW_ADMIN_PASSWORD=${{ secrets.AIRFLOW_ADMIN_PASSWORD }}
-            AIRFLOW_ADMIN_FIRSTNAME=${{ secrets.AIRFLOW_ADMIN_FIRSTNAME }}
-            AIRFLOW_ADMIN_LASTNAME=${{ secrets.AIRFLOW_ADMIN_LASTNAME }}
-            AIRFLOW_ADMIN_EMAIL=${{ secrets.AIRFLOW_ADMIN_EMAIL }}
-            EOF
-
-            cd "$LIVE_DIR"
-            docker compose down || true
-            docker compose up -d --build
+            echo "✅ Deployment completed successfully at $(date)"
+            echo "📊 Container status:"
             docker compose ps
-
-            echo "Pipeline deployment complete"
