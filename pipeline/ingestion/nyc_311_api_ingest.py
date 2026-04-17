@@ -1,20 +1,18 @@
-import requests
-from io import StringIO
 from datetime import datetime
+from io import StringIO
 
 import boto3
 import pandas as pd
 from botocore.client import Config
-
 from utils.http import get_session_with_retry
 
-BASE_URL = "https://data.cityofnewyork.us/resource/erm2-nwe9.csv"
+from utils.config import settings
 
 S3_CLIENT = boto3.client(
     "s3",
-    endpoint_url="http://minio:9000",
-    aws_access_key_id="changemeuser",
-    aws_secret_access_key="changemepass",
+    endpoint_url=settings.s3_endpoint_url,
+    aws_access_key_id=settings.aws_access_key_id,
+    aws_secret_access_key=settings.aws_secret_access_key,
     region_name="us-east-1",
     config=Config(signature_version="s3v4")
 )
@@ -29,7 +27,7 @@ def extract_nyc311_requests_since(extraction_date: datetime, start_date: datetim
 
     while True:
         url = (
-            f"{BASE_URL}"
+            f"{settings.dataset_url}"
             f"?$where={condition}"
             f"&$limit={limit}"
             f"&$offset={offset}"
@@ -55,7 +53,7 @@ def extract_nyc311_requests_since(extraction_date: datetime, start_date: datetim
         s3_key = f"raw/historical/nyc_311_requests_offset_{offset}.csv" if is_backfill else \
             f"raw/daily/date={extraction_date.strftime('%Y-%m-%d')}/nyc_311_requests_offset_{offset}.csv"
 
-        S3_CLIENT.put_object(Body=csv_buffer.getvalue(), Bucket="nyc311-data", Key=s3_key)
+        S3_CLIENT.put_object(Body=csv_buffer.getvalue(), Bucket=settings.s3_bucket_name, Key=s3_key)
 
         offset += limit
 

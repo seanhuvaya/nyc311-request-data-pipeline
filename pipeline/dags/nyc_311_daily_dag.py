@@ -6,6 +6,8 @@ from airflow.sdk import dag, task
 from spark_jobs.session import get_spark_session
 from utils.logging import setup_logging
 
+from utils.config import settings
+
 setup_logging()
 
 logger = logging.getLogger(__name__)
@@ -30,14 +32,13 @@ def nyc_311_daily_ingest():
         from spark_jobs.transforms.clean_nyc311_requests import clean_nyc311_requests
         from spark_jobs.transforms.enrich_nyc311_requests import enrich_nyc311_requests
 
-        spark = get_spark_session(app_name="nyc_311_historical_backfill", s3_endpoint="http://minio:9000",
-                                  access_key="changemeuser", secret_key="changemepass")
+        spark = get_spark_session(app_name="nyc_311_historical_backfill", use_s3=True)
 
         spark.sparkContext.setLogLevel("WARN")
         spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
 
         date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-        df = spark.read.csv(f"s3a://nyc311-data/raw/daily/date={date}/*.csv",
+        df = spark.read.csv(f"s3a://{settings.s3_bucket_name}/raw/daily/date={date}/*.csv",
                             header=True,
                             inferSchema=True)
 
@@ -45,20 +46,19 @@ def nyc_311_daily_ingest():
         enriched_df = enrich_nyc311_requests(cleaned_df)
 
         enriched_df.write.mode("overwrite") \
-            .parquet(f"s3a://nyc311-data/silver/daily/date={date}/")
+            .parquet(f"s3a://{settings.s3_bucket_name}/silver/daily/date={date}/")
 
         spark.stop()
 
     @task
     def build_staging_nyc311_requests_daily():
         from spark_jobs.staging.nyc311_requests_daily_staging import build_nyc311_requests_daily_staging_tables
-        spark = get_spark_session(app_name="nyc_311_historical_backfill", s3_endpoint="http://minio:9000",
-                                  access_key="changemeuser", secret_key="changemepass")
+        spark = get_spark_session(app_name="nyc_311_historical_backfill", use_s3=True, use_postgres=True)
         spark.sparkContext.setLogLevel("WARN")
         spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
 
         date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-        df = spark.read.parquet(f"s3a://nyc311-data/silver/daily/date={date}/")
+        df = spark.read.parquet(f"s3a://{settings.s3_bucket_name}/silver/daily/date={date}/")
         build_nyc311_requests_daily_staging_tables(df)
 
         spark.stop()

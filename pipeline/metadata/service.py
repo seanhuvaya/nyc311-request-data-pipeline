@@ -40,13 +40,3 @@ def update_metadata(pipeline_name: str, source_name: str, watermark_column: str,
             session.add(record)
 
         session.commit()
-
-
-if __name__ == "__main__":
-    result = get_metadata(pipeline_name="nyc_311_api", source_name="requests", watermark_column="created_date")
-    print(result)
-    # update_metadata(pipeline_name="nyc_311_api", source_name="requests", watermark_column="created_date",
-    #                 watermark_value=datetime.now(timezone.utc))
-    #
-    # result = get_metadata(pipeline_name="nyc_311_api", source_name="requests", watermark_column="created_date")
-    # print(result)
