@@ -65,22 +65,29 @@ services:
       <<: *common-env
     command: >
       bash -c "
-        set -e;
-        # Fix permissions for mounted volume
-        mkdir -p /opt/airflow/{logs,plugins};
-        chown -R ${AIRFLOW_UID:-50000}:0 /opt/airflow;
-        chmod -R 775 /opt/airflow/logs;
+            set -e;
 
-        airflow db migrate;
-        airflow users list | grep -q '${AIRFLOW_ADMIN_USER}' ||
-        airflow users create
-          --username admin
-          --password '${AIRFLOW_ADMIN_PASSWORD}'
-          --firstname '${AIRFLOW_ADMIN_FIRSTNAME}'
-          --lastname '${AIRFLOW_ADMIN_LASTNAME}'
-          --role Admin
-          --email '${AIRFLOW_ADMIN_EMAIL}'
-      "
+            # Fix permissions (from previous issue)
+            mkdir -p /opt/airflow/{dags,logs,plugins};
+            chown -R ${AIRFLOW_UID:-50000}:0 /opt/airflow;
+            chmod -R 775 /opt/airflow/logs;
+
+            airflow db migrate;
+
+            # Check if user exists, create if not
+            if ! airflow users list | grep -q '${AIRFLOW_ADMIN_USER}'; then
+              airflow users create \
+                --username '${AIRFLOW_ADMIN_USER}' \
+                --password '${AIRFLOW_ADMIN_PASSWORD}' \
+                --firstname '${AIRFLOW_ADMIN_FIRSTNAME}' \
+                --lastname '${AIRFLOW_ADMIN_LASTNAME}' \
+                --role Admin \
+                --email '${AIRFLOW_ADMIN_EMAIL}';
+              echo 'Admin user created successfully';
+            else
+              echo 'Admin user already exists';
+            fi
+          "
     restart: "no"
     user: "0:0"   # explicitly run as root for init
 
