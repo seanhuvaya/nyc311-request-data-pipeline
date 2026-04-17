@@ -1,0 +1,80 @@
+name: Deploy Pipeline to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Upload project to VPS temp folder
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          source: "."
+          target: "~/nyc311-pipeline/deploy_tmp"
+          rm: true
+          strip_components: 0
+
+      - name: Move project into app folder and deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          script: |
+            set -e
+
+            APP_DIR=~/nyc311-pipeline
+            TMP_DIR=$APP_DIR/deploy_tmp
+            LIVE_DIR=$APP_DIR/app
+
+            mkdir -p "$LIVE_DIR"
+
+            shopt -s dotglob nullglob
+
+            # Clear old app files except persistent env if you want to keep it
+            find "$LIVE_DIR" -mindepth 1 -maxdepth 1 ! -name '.env' -exec rm -rf {} +
+
+            # Move uploaded files into live dir
+            if [ -d "$TMP_DIR" ]; then
+              mv "$TMP_DIR"/* "$LIVE_DIR"/
+              rm -rf "$TMP_DIR"
+            fi
+
+            # Write .env file
+            cat > "$LIVE_DIR/.env" <<EOF
+            DB_NAME=${{ secrets.DB_NAME }}
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_HOST=${{ secrets.DB_HOST }}
+            DB_PORT=${{ secrets.DB_PORT }}
+            DATASET_URL=${{ secrets.DATASET_URL }}
+            AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            S3_ENDPOINT_URL=${{ secrets.S3_ENDPOINT_URL }}
+            S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
+            AIRFLOW_ADMIN_USER=${{ secrets.AIRFLOW_ADMIN_USER }}
+            AIRFLOW_ADMIN_PASSWORD=${{ secrets.AIRFLOW_ADMIN_PASSWORD }}
+            AIRFLOW_ADMIN_FIRSTNAME=${{ secrets.AIRFLOW_ADMIN_FIRSTNAME }}
+            AIRFLOW_ADMIN_LASTNAME=${{ secrets.AIRFLOW_ADMIN_LASTNAME }}
+            AIRFLOW_ADMIN_EMAIL=${{ secrets.AIRFLOW_ADMIN_EMAIL }}
+            EOF
+
+            cd "$LIVE_DIR"
+
+            docker compose down || true
+            docker compose up -d --build
+
+            docker compose ps
+            echo "Pipeline deployment complete"

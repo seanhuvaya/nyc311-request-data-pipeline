@@ -1,19 +1,25 @@
+name: nyc311-pipeline
+
 x-common-env: &common-env
   DB_NAME: ${DB_NAME:-nyc311}
   DB_USER: ${DB_USER:-postgres}
   DB_PASSWORD: ${DB_PASSWORD:-postgres}
   DB_HOST: ${DB_HOST:-postgres}
   DB_PORT: ${DB_PORT:-5432}
+
   DATASET_URL: ${DATASET_URL:-https://data.cityofnewyork.us/resource/erm2-nwe9.csv}
+
   AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-changemeuser}
   AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-changemepass}
   S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
   S3_BUCKET_NAME: ${S3_BUCKET_NAME:-nyc311}
+
   AIRFLOW_ADMIN_USER: ${AIRFLOW_ADMIN_USER:-admin}
   AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD:-pass1234}
   AIRFLOW_ADMIN_FIRSTNAME: ${AIRFLOW_ADMIN_FIRSTNAME:-admin}
   AIRFLOW_ADMIN_LASTNAME: ${AIRFLOW_ADMIN_LASTNAME:-admin}
   AIRFLOW_ADMIN_EMAIL: ${AIRFLOW_ADMIN_EMAIL:-admin@airflow.com}
+
   AIRFLOW_HOME: /opt/airflow
   PYTHONPATH: /opt/airflow
   AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
@@ -26,6 +32,7 @@ services:
   postgres:
     image: postgres:16
     container_name: postgres
+    restart: unless-stopped
     environment:
       <<: *common-env
       POSTGRES_DB: ${DB_NAME:-nyc311}
@@ -35,7 +42,13 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./pipeline/sql:/docker-entrypoint-initdb.d
+      - ./pipeline/sql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-nyc311}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   airflow-init:
     build:
@@ -43,25 +56,38 @@ services:
       dockerfile: Dockerfile
     container_name: airflow-init
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     volumes:
       - ./pipeline:/opt/airflow
     environment:
       <<: *common-env
     command: >
       bash -c "
-        airflow db migrate &&
-        airflow users create --username ${AIRFLOW_ADMIN_USER} --password ${AIRFLOW_ADMIN_PASSWORD} --firstname ${AIRFLOW_ADMIN_FIRSTNAME} --lastname ${AIRFLOW_ADMIN_LASTNAME} --role Admin --email ${AIRFLOW_ADMIN_EMAIL}
+        set -e;
+        airflow db migrate;
+        airflow users list | grep -q '${AIRFLOW_ADMIN_USER}' ||
+        airflow users create
+          --username '${AIRFLOW_ADMIN_USER}'
+          --password '${AIRFLOW_ADMIN_PASSWORD}'
+          --firstname '${AIRFLOW_ADMIN_FIRSTNAME}'
+          --lastname '${AIRFLOW_ADMIN_LASTNAME}'
+          --role Admin
+          --email '${AIRFLOW_ADMIN_EMAIL}'
       "
+    restart: "no"
 
   airflow-api-server:
     build:
       context: ./pipeline
       dockerfile: Dockerfile
     container_name: airflow-api-server
+    restart: unless-stopped
     depends_on:
-      - postgres
-      - airflow-init
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
     ports:
       - "8080:8080"
     volumes:
@@ -69,15 +95,24 @@ services:
     environment:
       <<: *common-env
     command: airflow api-server --port 8080
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
 
   airflow-scheduler:
     build:
       context: ./pipeline
       dockerfile: Dockerfile
     container_name: airflow-scheduler
+    restart: unless-stopped
     depends_on:
-      - postgres
-      - airflow-init
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
     volumes:
       - ./pipeline:/opt/airflow
     environment:
@@ -89,9 +124,12 @@ services:
       context: ./pipeline
       dockerfile: Dockerfile
     container_name: airflow-dag-processor
+    restart: unless-stopped
     depends_on:
-      - postgres
-      - airflow-init
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
     volumes:
       - ./pipeline:/opt/airflow
     environment:
@@ -101,6 +139,7 @@ services:
   minio:
     image: quay.io/minio/minio:latest
     container_name: minio
+    restart: unless-stopped
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -109,25 +148,30 @@ services:
       MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY}
     volumes:
       - data_minio:/data
-    command: [ "server", "/data", "--console-address", ":9001" ]
+    command: ["server", "/data", "--console-address", ":9001"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/minio/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
   minio-init:
     image: minio/mc:latest
     container_name: minio-init
     depends_on:
-      - minio
+      minio:
+        condition: service_healthy
     environment:
       <<: *common-env
     entrypoint: >
       /bin/sh -c "
-      until mc alias set local http://minio:9000 ${AWS_ACCESS_KEY_ID} ${AWS_SECRET_ACCESS_KEY}; do
-        echo 'waiting for minio...';
-        sleep 2;
-      done;
-      mc ready local;
+      set -e;
+      mc alias set local http://minio:9000 ${AWS_ACCESS_KEY_ID} ${AWS_SECRET_ACCESS_KEY};
       mc mb -p local/${S3_BUCKET_NAME} || true;
       mc ls local;
       "
+    restart: "no"
 
 volumes:
   postgres_data:
