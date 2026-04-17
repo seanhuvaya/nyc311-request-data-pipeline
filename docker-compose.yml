@@ -20,7 +20,7 @@ x-common-env: &common-env
   AIRFLOW_ADMIN_LASTNAME: ${AIRFLOW_ADMIN_LASTNAME:-admin}
   AIRFLOW_ADMIN_EMAIL: ${AIRFLOW_ADMIN_EMAIL:-admin@airflow.com}
 
-  AIRFLOW_UID: 50000
+  AIRFLOW_UID: ${AIRFLOW_UID:-50000}
   AIRFLOW_HOME: /opt/airflow
   PYTHONPATH: /opt/airflow
   AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
@@ -45,7 +45,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./pipeline/sql:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-nyc311}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-nyc311}" ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -66,6 +66,11 @@ services:
     command: >
       bash -c "
         set -e;
+        # Fix permissions for mounted volume
+        mkdir -p /opt/airflow/{logs,plugins};
+        chown -R ${AIRFLOW_UID:-50000}:0 /opt/airflow;
+        chmod -R 775 /opt/airflow/logs;
+
         airflow db migrate;
         airflow users list | grep -q '${AIRFLOW_ADMIN_USER}' ||
         airflow users create
@@ -77,6 +82,7 @@ services:
           --email '${AIRFLOW_ADMIN_EMAIL}'
       "
     restart: "no"
+    user: "0:0"   # explicitly run as root for init
 
   airflow-api-server:
     build:
@@ -98,7 +104,7 @@ services:
       <<: *common-env
     command: airflow api-server --port 8080
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/health || exit 1"]
+      test: [ "CMD-SHELL", "curl -fsS http://127.0.0.1:8080/health || exit 1" ]
       interval: 15s
       timeout: 10s
       retries: 10
@@ -152,9 +158,9 @@ services:
       MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY}
     volumes:
       - data_minio:/data
-    command: ["server", "/data", "--console-address", ":9001"]
+    command: [ "server", "/data", "--console-address", ":9001" ]
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/minio/health/live || exit 1"]
+      test: [ "CMD-SHELL", "curl -fsS http://127.0.0.1:9000/minio/health/live || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 10
