@@ -74,7 +74,7 @@ services:
         airflow db migrate;
         airflow users list | grep -q '${AIRFLOW_ADMIN_USER}' ||
         airflow users create
-          --username '${AIRFLOW_ADMIN_USER}'
+          --username admin
           --password '${AIRFLOW_ADMIN_PASSWORD}'
           --firstname '${AIRFLOW_ADMIN_FIRSTNAME}'
           --lastname '${AIRFLOW_ADMIN_LASTNAME}'
