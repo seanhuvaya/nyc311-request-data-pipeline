@@ -170,7 +170,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: nyc311-backend-routers
+    container_name: nyc311-backend-api
     restart: unless-stopped
     depends_on:
       postgres:
