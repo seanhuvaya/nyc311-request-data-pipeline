@@ -1,6 +1,7 @@
 import logging
 from datetime import timedelta, datetime
 
+import pendulum
 from airflow.sdk import dag, task
 from pyspark.sql import functions as F
 from spark_jobs.session import get_spark_session
@@ -23,8 +24,14 @@ def nyc_311_historical_backfill():
     @task
     def historical_backfill(logical_date=None):
         from ingestion.historical_ingest import backfill_nyc311_requests
-        logger.info(f"Running historical backfill from {logical_date}")
-        backfill_nyc311_requests(logical_date)
+
+        ny_tz = pendulum.timezone("America/New_York")
+
+        start_date = logical_date.in_timezone(ny_tz)
+
+        logger.info(f"Running historical backfill from {start_date}")
+
+        backfill_nyc311_requests(start_date)
 
     @task(retries=3, retry_delay=timedelta(minutes=1), retry_exponential_backoff=True)
     def transform_and_save_requests():
