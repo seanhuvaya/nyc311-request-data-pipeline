@@ -170,7 +170,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: nyc311-backend-api
+    container_name: nyc311-backend-routers
     restart: unless-stopped
     depends_on:
       postgres:
@@ -179,7 +179,7 @@ services:
       - "8000:8000"
     environment:
       <<: *common-env
-      DATABASE_URL: postgresql+psycopg2://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+      DATABASE_URL: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
     command: uvicorn main:app --host 0.0.0.0 --port 8000
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:8000/health || exit 1" ]
