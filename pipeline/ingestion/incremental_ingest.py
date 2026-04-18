@@ -1,5 +1,5 @@
 import logging
-from datetime import timezone, datetime
+from datetime import timezone, datetime, timedelta
 
 from metadata.service import update_metadata, get_metadata
 from .nyc_311_api_ingest import extract_nyc311_requests_since
@@ -12,7 +12,7 @@ def ingest_nyc311_daily_requests():
 
     logger.info(f"Fetching records since: {metadata.watermark_value}")
 
-    start_date = (metadata.watermark_value - datetime.timedelta(days=1))
+    start_date = (metadata.watermark_value - timedelta(days=1))
 
     latest_created_date = extract_nyc311_requests_since(
         extraction_date=datetime.now(timezone.utc),
