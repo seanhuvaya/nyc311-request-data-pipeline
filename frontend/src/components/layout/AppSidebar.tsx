@@ -1,13 +1,4 @@
-import {
-    LayoutDashboard,
-    Building2,
-    TrendingUp,
-    MapPin,
-    Layers,
-    Gauge,
-    Phone,
-    Grid3x3,
-} from "lucide-react"
+import { LayoutDashboard, Phone } from "lucide-react"
 import {
     Sidebar,
     SidebarContent,
