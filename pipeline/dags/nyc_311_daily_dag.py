@@ -43,7 +43,7 @@ def nyc_311_daily_ingest():
         spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
 
         date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-        df = spark.read.csv(f"s3a://{settings.s3_bucket_name}/{s3_bronze_key}",
+        df = spark.read.csv(f"s3a://{settings.s3_bucket_name}/{s3_bronze_key}/*.csv",
                             header=True,
                             inferSchema=True)
 
@@ -65,7 +65,7 @@ def nyc_311_daily_ingest():
         spark.sparkContext.setLogLevel("WARN")
         spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
 
-        df = spark.read.parquet(f"s3a://{settings.s3_bucket_name}/{s3_silver_key}")
+        df = spark.read.parquet(f"s3a://{settings.s3_bucket_name}/{s3_silver_key}/")
         build_nyc311_requests_daily_staging_tables(df)
 
         spark.stop()
