@@ -45,12 +45,9 @@ def nyc_311_historical_backfill():
         cleaned_df = clean_nyc311_requests(df)
         enriched_df = enrich_nyc311_requests(cleaned_df)
 
-        enriched_df = enriched_df.withColumn("date", F.to_date("created_date"))
-
         logger.info(f"partitions before write: {enriched_df.rdd.getNumPartitions()}")
 
-        enriched_df.write.mode("overwrite").partitionBy("date").parquet(
-            f"s3a://{settings.s3_bucket_name}/silver/historical/")
+        enriched_df.write.mode("overwrite").parquet(f"s3a://{settings.s3_bucket_name}/silver/historical/")
 
         spark.stop()
 
