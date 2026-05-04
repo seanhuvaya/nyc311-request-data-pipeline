@@ -27,7 +27,7 @@ def nyc_311_daily_ingest():
 
         date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
 
-        s3_key = f"bronze/daily/date={date}/"
+        s3_key = f"bronze/daily/date={date}"
         ingest_nyc311_daily_requests(s3_key=s3_key)
 
         return s3_key
