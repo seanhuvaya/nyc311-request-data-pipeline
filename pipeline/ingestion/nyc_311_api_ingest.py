@@ -19,7 +19,7 @@ S3_CLIENT = boto3.client(
 
 
 def extract_nyc311_requests_since(start_date: datetime, s3_save_key: str, limit: int = 1000, offset: int = 0):
-    latest_created_date = start_date
+    latest_created_date = start_date.replace(tzinfo=None) if start_date.tzinfo else start_date
     start_date = start_date.strftime("%Y-%m-%dT00:00:00")
 
     condition = f"created_date>='{start_date}'"
