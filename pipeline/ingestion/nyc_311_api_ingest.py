@@ -49,7 +49,9 @@ def extract_nyc311_requests_since(start_date: datetime, s3_save_key: str, limit:
 
         latest_created_date = max(latest_created_date, chunk["created_date"].max())
 
-        S3_CLIENT.put_object(Body=csv_buffer.getvalue(), Bucket=settings.s3_bucket_name, Key=s3_save_key)
+        s3_file_key = f"{s3_save_key}/nyc311_requests_offset_{offset}.csv"
+
+        S3_CLIENT.put_object(Body=csv_buffer.getvalue(), Bucket=settings.s3_bucket_name, Key=s3_file_key)
 
         offset += limit
 
