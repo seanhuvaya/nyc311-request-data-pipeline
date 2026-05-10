@@ -1,4 +1,9 @@
 # NYC 311 Data Pipeline
+## 🔴 Live Demo
+
+🚀 API: ![https://api.nyc311.seanhuvaya.dev/redocs](https://api.nyc311.seanhuvaya.dev)  
+📊 Dashboard: ![[https://nyc311.seanhuvaya.dev](https://nyc311.seanhuvaya.dev) 
+
 ## Overview
 This project implements an end-to-end data engineering pipeline that processes NYC 311 service request data into a structured analytics platform. The system ingests raw data, transforms it through a medallion architecture, and exposes curated datasets through APIs and dashboards.
 
