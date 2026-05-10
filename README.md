@@ -1,6 +1,8 @@
 # NYC 311 Data Pipeline
 ![Live](https://img.shields.io/badge/Live%20Demo-Available-brightgreen)
-🚀 API: https://api.nyc311.seanhuvaya.dev/redoc
+
+🚀 API: https://api.nyc311.seanhuvaya.dev/docs
+
 📊 Dashboard: https://nyc311.seanhuvaya.dev 
 
 ## Overview
