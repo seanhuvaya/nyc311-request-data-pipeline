@@ -1,83 +1,61 @@
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 
 import pendulum
 from airflow.sdk import dag, task
-from spark_jobs.session import get_spark_session
+from shared.spark_tasks import make_transform_task, make_staging_task, build_gold_nyc311_requests_daily, \
+    update_watermark
 from utils.logging import setup_logging
 
-from utils.config import settings
-
 setup_logging()
-
 logger = logging.getLogger(__name__)
 
 
 @dag(
     dag_id="nyc_311_daily_ingest",
-    schedule="0 3 * * *",  # Runs at 3 AM every day
-    start_date=pendulum.datetime(2026, 4, 13, 3, 0, tz="America/New_York"),
+    schedule="0 0 * * *",
+    start_date=datetime(2026, 1, 1, tzinfo=pendulum.timezone("America/New_York")),
     catchup=False,
     tags=["nyc311", "daily", "ingest"],
 )
 def nyc_311_daily_ingest():
     @task()
-    def incremental_ingest():
-        from ingestion.incremental_ingest import ingest_nyc311_daily_requests
-
-        date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-
-        s3_key = f"bronze/daily/date={date}"
-        ingest_nyc311_daily_requests(s3_key=s3_key)
-
-        return s3_key
+    def get_logical_date_str(logical_date=None) -> str:
+        date = logical_date.replace(tzinfo=None)
+        return date.strftime("%Y-%m-%d")
 
     @task()
-    def transform_and_save_requests(s3_bronze_key: str):
-        from spark_jobs.transforms.clean_nyc311_requests import clean_nyc311_requests
-        from spark_jobs.transforms.enrich_nyc311_requests import enrich_nyc311_requests
+    def incremental_ingest(date_str=None) -> dict:
+        from ingestion.incremental_ingest import ingest_nyc311_daily_requests
 
-        spark = get_spark_session(app_name="nyc_311_historical_backfill", use_s3=True)
+        s3_key = f"bronze/daily/date={date_str}"
 
-        spark.sparkContext.setLogLevel("WARN")
-        spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
+        logger.info(f"Starting incremental ingest | logical_date={date_str}, s3_key={s3_key}")
+        latest_created_date = ingest_nyc311_daily_requests(s3_key=s3_key)
+        logger.info(f"Incremental ingest complete | s3_key={s3_key}")
 
-        date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-        df = spark.read.csv(f"s3a://{settings.s3_bucket_name}/{s3_bronze_key}/*.csv",
-                            header=True,
-                            inferSchema=True)
+        return {"s3_key": s3_key, "latest_created_date": str(latest_created_date)}
 
-        cleaned_df = clean_nyc311_requests(df)
-        enriched_df = enrich_nyc311_requests(cleaned_df)
+    @task()
+    def get_bronze(ingest_result: dict) -> str:
+        return ingest_result["s3_key"]
 
-        s3_silver_key = f"silver/daily/date={date}/"
-        enriched_df.write.mode("overwrite") \
-            .parquet(f"s3a://{settings.s3_bucket_name}/{s3_silver_key}")
+    @task()
+    def get_latest_created_date(ingest_result: dict) -> datetime:
+        return ingest_result["latest_created_date"]
 
-        spark.stop()
+    transform = make_transform_task()
+    staging = make_staging_task()
 
-        return s3_silver_key
+    logical_date = get_logical_date_str()
+    ingest_result = incremental_ingest(date_str=logical_date)
+    bronze = get_bronze(ingest_result)
+    latest_date = get_latest_created_date(ingest_result)
 
-    @task
-    def build_staging_nyc311_requests_daily(s3_silver_key: str):
-        from spark_jobs.staging.nyc311_requests_daily_staging import build_nyc311_requests_daily_staging_tables
-        spark = get_spark_session(app_name="nyc_311_historical_backfill", use_s3=True, use_postgres=True)
-        spark.sparkContext.setLogLevel("WARN")
-        spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
+    silver = transform(input_glob=f"{bronze}/*.csv", output_path=f"silver/daily/date={logical_date}/")
 
-        df = spark.read.parquet(f"s3a://{settings.s3_bucket_name}/{s3_silver_key}/")
-        build_nyc311_requests_daily_staging_tables(df)
-
-        spark.stop()
-
-    @task
-    def build_gold_nyc311_requests_daily():
-        from spark_jobs.gold.nyc311_requests_daily_gold import build_gold_nyc311_requests_daily
-        build_gold_nyc311_requests_daily()
-
-    s3_bronze = incremental_ingest()
-    s3_silver = transform_and_save_requests(s3_bronze_key=s3_bronze)
-    s3_bronze >> s3_silver >> build_staging_nyc311_requests_daily(s3_silver_key=s3_silver) >> build_gold_nyc311_requests_daily()
+    bronze >> silver >> staging(silver_path=silver) >> build_gold_nyc311_requests_daily() >> \
+    update_watermark(latest_created_date=latest_date)
 
 
 nyc_311_daily_ingest()
