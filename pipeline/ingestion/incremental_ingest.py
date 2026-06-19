@@ -1,8 +1,9 @@
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from metadata.service import get_metadata
+from utils.cloud import make_s3_client
 from .nyc_311_api_ingest import extract_nyc311_requests_since
 
 logger = logging.getLogger(__name__)
@@ -23,7 +24,8 @@ def ingest_nyc311_daily_requests(s3_key: str) -> datetime:
     logger.info(f"Extracting records since {start_date}")
     latest_created_date = extract_nyc311_requests_since(
         start_date=start_date,
-        s3_save_key=s3_key
+        s3_save_key=s3_key,
+        s3_client=make_s3_client(),
     )
     logger.info(f"Extraction complete | latest_created_date={latest_created_date}")
 

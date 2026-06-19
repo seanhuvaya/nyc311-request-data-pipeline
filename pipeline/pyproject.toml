@@ -14,3 +14,12 @@ dependencies = [
     "sqlmodel>=0.0.38",
     "urllib3>=2.6.3",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]

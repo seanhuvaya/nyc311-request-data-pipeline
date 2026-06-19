@@ -1,66 +1,69 @@
 import logging
 from datetime import datetime
 from io import StringIO
+from urllib.parse import urlencode
 
-import boto3
 import pandas as pd
-from botocore.client import Config
-from utils.http import get_session_with_retry
 
 from utils.config import settings
-
-S3_CLIENT = boto3.client(
-    "s3",
-    endpoint_url=settings.s3_endpoint_url,
-    aws_access_key_id=settings.aws_access_key_id,
-    aws_secret_access_key=settings.aws_secret_access_key,
-    region_name="us-east-1",
-    config=Config(signature_version="s3v4")
-)
+from utils.http import get_session_with_retry
 
 logger = logging.getLogger(__name__)
 
 
-def extract_nyc311_requests_since(start_date: datetime, s3_save_key: str, limit: int = 1000, offset: int = 0):
+def extract_nyc311_requests_since(
+    start_date: datetime,
+    s3_save_key: str,
+    s3_client,
+    limit: int = 1000,
+    offset: int = 0,
+) -> datetime:
+    start_date_str = start_date.strftime("%Y-%m-%dT00:00:00")
     latest_created_date = start_date.replace(tzinfo=None) if start_date.tzinfo else start_date
-    start_date = start_date.strftime("%Y-%m-%dT00:00:00")
-    condition = f"created_date>='{start_date}'"
 
-    logger.info(f"Starting extraction | start_date={start_date}, s3_save_key={s3_save_key}, limit={limit}")
+    logger.info(f"Starting extraction | start_date={start_date_str}, s3_save_key={s3_save_key}, limit={limit}")
+
+    session = get_session_with_retry()
 
     while True:
-        url = (
-            f"{settings.dataset_url}"
-            f"?$where={condition}"
-            f"&$limit={limit}"
-            f"&$offset={offset}"
-            f"&$order=created_date DESC"
-        )
+        params = {
+            "$where": f"created_date>='{start_date_str}'",
+            "$limit": limit,
+            "$offset": offset,
+            "$order": "created_date DESC",
+        }
+        url = f"{settings.dataset_url}?{urlencode(params)}"
 
-        logger.debug(f"Fetching chunk | offset={offset}, limit={limit}, url={url}")
+        logger.debug(f"Fetching chunk | offset={offset}, limit={limit}")
 
-        session = get_session_with_retry()
         response = session.get(url, timeout=60)
         response.raise_for_status()
 
-        csv_buffer = StringIO(response.text)
-        chunk = pd.read_csv(csv_buffer)
+        dates_df = pd.read_csv(StringIO(response.text), usecols=["created_date"])
 
-        if chunk.empty:
+        if dates_df.empty:
             logger.info(f"No more records found | final_offset={offset}, latest_created_date={latest_created_date}")
             break
 
-        chunk["created_date"] = pd.to_datetime(chunk["created_date"])
-        chunk_latest = chunk["created_date"].max()
+        dates_df["created_date"] = pd.to_datetime(dates_df["created_date"])
+        chunk_latest = dates_df["created_date"].max().to_pydatetime().replace(tzinfo=None)
         latest_created_date = max(latest_created_date, chunk_latest)
 
-        logger.debug(
-            f"Chunk loaded | rows={len(chunk)}, chunk_latest={chunk_latest}, running_latest={latest_created_date}")
+        logger.debug(f"Chunk loaded | rows={len(dates_df)}, chunk_latest={chunk_latest}, running_latest={latest_created_date}")
 
         s3_file_key = f"{s3_save_key}/nyc311_requests_offset_{offset}.csv"
-        S3_CLIENT.put_object(Body=csv_buffer.getvalue(), Bucket=settings.s3_bucket_name, Key=s3_file_key)
+        try:
+            s3_client.put_object(
+                Body=response.content,
+                Bucket=settings.s3_bucket_name,
+                Key=s3_file_key,
+                ContentType="text/csv",
+            )
+        except Exception:
+            logger.exception(f"Failed to upload chunk to S3 | s3_key={s3_file_key}, offset={offset}")
+            raise
 
-        logger.info(f"Chunk uploaded to S3 | s3_key={s3_file_key}, rows={len(chunk)}, offset={offset}")
+        logger.info(f"Chunk uploaded to S3 | s3_key={s3_file_key}, rows={len(dates_df)}, offset={offset}")
 
         offset += limit
 

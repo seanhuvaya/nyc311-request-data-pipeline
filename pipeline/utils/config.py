@@ -15,7 +15,17 @@ class Settings(BaseSettings):
     aws_secret_access_key: str = Field(default="changemepass", alias="AWS_SECRET_ACCESS_KEY")
     s3_endpoint_url: str = Field(default="http://minio:9000", alias="S3_ENDPOINT_URL")
     s3_bucket_name: str = Field(default="nyc311-data", alias="S3_BUCKET_NAME")
+    s3_region: str = Field(default="us-east-1", alias="S3_REGION")
+    s3_save_key: str = Field(default="nyc311_requests", alias="S3_SAVE_KEY")
+    
+    extraction_limit: int = Field(default=1000, gt=0)
+    extraction_offset: int = Field(default=0, ge=0)
+    extraction_chunk_limit: Optional[int] = None
+    extraction_max_chunks: int = Field(default=100, gt=0)
+    extraction_retry_attempts: int = Field(default=3, ge=1)
+    extraction_retry_backoff: float = Field(default=1.0, gt=0)
 
+    @property
     def database_url(self) -> str:
         return (
             f"postgresql+psycopg2://{self.db_user}:{self.db_password}"
