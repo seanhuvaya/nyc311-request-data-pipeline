@@ -1183,6 +1183,15 @@ wheels = [
 ]
 
 [[package]]
+name = "iniconfig"
+version = "2.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/72/34/14ca021ce8e5dfedc35312d08ba8bf51fdd999c576889fc2c24cb97f4f10/iniconfig-2.3.0.tar.gz", hash = "sha256:c76315c77db068650d49c5b56314774a7804df16fee4402c1f19d6d15d8c4730", size = 20503, upload-time = "2025-10-18T21:55:43.219Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl", hash = "sha256:f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12", size = 7484, upload-time = "2025-10-18T21:55:41.639Z" },
+]
+
+[[package]]
 name = "itsdangerous"
 version = "2.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1652,6 +1661,43 @@ wheels = [
 ]
 
 [[package]]
+name = "nyc311-pipeline"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "apache-airflow" },
+    { name = "apache-airflow-providers-fab" },
+    { name = "apache-airflow-providers-postgres" },
+    { name = "boto3" },
+    { name = "pandas" },
+    { name = "psycopg2-binary" },
+    { name = "sqlalchemy" },
+    { name = "sqlmodel" },
+    { name = "urllib3" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "apache-airflow", specifier = ">=3.2.0" },
+    { name = "apache-airflow-providers-fab", specifier = ">=3.6.1" },
+    { name = "apache-airflow-providers-postgres", specifier = ">=6.6.3" },
+    { name = "boto3", specifier = ">=1.42.88" },
+    { name = "pandas", specifier = ">=3.0.2" },
+    { name = "psycopg2-binary", specifier = ">=2.9" },
+    { name = "sqlalchemy", specifier = ">=2.0" },
+    { name = "sqlmodel", specifier = ">=0.0.38" },
+    { name = "urllib3", specifier = ">=2.6.3" },
+]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8.0" }]
+
+[[package]]
 name = "opentelemetry-api"
 version = "1.41.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1908,33 +1954,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pipeline"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "apache-airflow" },
-    { name = "apache-airflow-providers-fab" },
-    { name = "apache-airflow-providers-postgres" },
-    { name = "boto3" },
-    { name = "pandas" },
-    { name = "pyspark" },
-    { name = "sqlmodel" },
-    { name = "urllib3" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "apache-airflow", specifier = ">=3.2.0" },
-    { name = "apache-airflow-providers-fab", specifier = ">=3.6.1" },
-    { name = "apache-airflow-providers-postgres", specifier = ">=6.6.3" },
-    { name = "boto3", specifier = ">=1.42.88" },
-    { name = "pandas", specifier = ">=3.0.2" },
-    { name = "pyspark", specifier = "==4.1.1" },
-    { name = "sqlmodel", specifier = ">=0.0.38" },
-    { name = "urllib3", specifier = ">=2.6.3" },
-]
-
-[[package]]
 name = "pluggy"
 version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2037,15 +2056,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/97/77/21b0ea2e1a73aa5fa9222b2a6b8ba325c43c3a8d54272839c991f2345656/psycopg2_binary-2.9.11-cp314-cp314-musllinux_1_2_riscv64.whl", hash = "sha256:32770a4d666fbdafab017086655bcddab791d7cb260a16679cc5a7338b64343b", size = 3044737, upload-time = "2025-10-30T02:55:35.69Z" },
     { url = "https://files.pythonhosted.org/packages/67/69/f36abe5f118c1dca6d3726ceae164b9356985805480731ac6712a63f24f0/psycopg2_binary-2.9.11-cp314-cp314-musllinux_1_2_x86_64.whl", hash = "sha256:c3cb3a676873d7506825221045bd70e0427c905b9c8ee8d6acd70cfcbd6e576d", size = 3347643, upload-time = "2025-10-10T11:13:53.499Z" },
     { url = "https://files.pythonhosted.org/packages/e1/36/9c0c326fe3a4227953dfb29f5d0c8ae3b8eb8c1cd2967aa569f50cb3c61f/psycopg2_binary-2.9.11-cp314-cp314-win_amd64.whl", hash = "sha256:4012c9c954dfaccd28f94e84ab9f94e12df76b4afb22331b1f0d3154893a6316", size = 2803913, upload-time = "2025-10-10T11:13:57.058Z" },
-]
-
-[[package]]
-name = "py4j"
-version = "0.10.9.9"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/38/31/0b210511177070c8d5d3059556194352e5753602fa64b85b7ab81ec1a009/py4j-0.10.9.9.tar.gz", hash = "sha256:f694cad19efa5bd1dee4f3e5270eb406613c974394035e5bfc4ec1aba870b879", size = 761089, upload-time = "2025-01-15T03:53:18.624Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/bd/db/ea0203e495be491c85af87b66e37acfd3bf756fd985f87e46fc5e3bf022c/py4j-0.10.9.9-py2.py3-none-any.whl", hash = "sha256:c7c26e4158defb37b0bb124933163641a2ff6e3a3913f7811b0ddbe07ed61533", size = 203008, upload-time = "2025-01-15T03:53:15.648Z" },
 ]
 
 [[package]]
@@ -2202,13 +2212,20 @@ wheels = [
 ]
 
 [[package]]
-name = "pyspark"
-version = "4.1.1"
+name = "pytest"
+version = "9.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "py4j" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "iniconfig" },
+    { name = "packaging" },
+    { name = "pluggy" },
+    { name = "pygments" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/19/bf/58ee13add151469c25825b7125bbf62c3bdcec05eec4d458fcb5c5516066/pyspark-4.1.1.tar.gz", hash = "sha256:77f78984aa84fbe865c717dd37b49913b4e5c97d76ef6824f932f1aefa6621ec", size = 455359625, upload-time = "2026-01-09T09:38:38.28Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e4/47/b9efed96c114afcfa3c9d3fe98a76a1d14c74a9e266d397cf6eb64be5e01/pytest-9.1.1.tar.gz", hash = "sha256:1088fbde8f2b49d95a549a195707afa7a76a3ce9bcadc26b6d71f0ffda5fe313", size = 1636369, upload-time = "2026-06-19T10:58:32.857Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/24/25/1de2678b631f5a49215c6c96fff41ba892b0a34df68d6d80292b1b48aa7f/pytest-9.1.1-py3-none-any.whl", hash = "sha256:37a86b45efb9a47a61a36449063e8e18d0cab3161329fc099eb21783169c4f0c", size = 386536, upload-time = "2026-06-19T10:58:31.347Z" },
+]
 
 [[package]]
 name = "python-daemon"
