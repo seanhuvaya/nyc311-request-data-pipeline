@@ -63,7 +63,7 @@ def extract_nyc311_requests_since(
 
         logger.debug(f"Chunk loaded | rows={len(dates_df)}, chunk_latest_watermark={chunk_latest_watermark}, watermark={watermark}")
 
-        s3_file_key = f"{s3_save_key}/{start_date.strftime("%Y-%m-%d")}/nyc311_requests_offset_{offset}.csv"
+        s3_file_key = f"{s3_save_key}/{start_date.strftime('%Y-%m-%d')}/nyc311_requests_offset_{offset}.csv"
         try:
             s3_client.put_object(
                 Body=response.content,
@@ -82,18 +82,18 @@ def extract_nyc311_requests_since(
 
     logger.info(f"Extraction complete | total_records_fetched={total_records_fetched}, watermark={watermark}")
 
-    _save_metadata(s3_client, s3_save_key, watermark, records_fetched=total_records_fetched)
+    _save_metadata(s3_client, watermark, records_fetched=total_records_fetched)
 
     return watermark
 
 
-def _save_metadata(s3_client, s3_save_key: str, watermark: datetime, records_fetched: int) -> None:
+def _save_metadata(s3_client, watermark: datetime, records_fetched: int) -> None:
     metadata = {
         "latest_watermark": watermark.isoformat(),
         "total_records_fetched": records_fetched,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
-    key = f"{s3_save_key}/metadata.json"
+    key = "extraction_metadata.json"
     s3_client.put_object(
         Body=json.dumps(metadata).encode(),
         Bucket=settings.s3_bucket_name,

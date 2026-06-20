@@ -2,11 +2,11 @@ import logging
 from datetime import datetime, timedelta
 
 import pendulum
-from airflow.sdk import dag, task
+from airflow.sdk import dag, get_current_context, task
 from shared.tasks import transform_and_load
 from nyc311.utils.log import setup_logging
 
-setup_logging()
+setup_logging(log_level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
@@ -19,7 +19,9 @@ logger = logging.getLogger(__name__)
 )
 def nyc_311_daily_ingest():
     @task()
-    def get_date_str(logical_date=None) -> str:
+    def get_date_str() -> str:
+        logical_date = get_current_context()["logical_date"]
+        logger.debug(f"Getting logical date string | Logical date={logical_date}")
         return logical_date.replace(tzinfo=None).strftime("%Y-%m-%d")
 
     @task()
@@ -43,7 +45,9 @@ def nyc_311_daily_ingest():
 )
 def nyc_311_backfill():
     @task()
-    def get_date_str(logical_date=None) -> str:
+    def get_date_str() -> str:
+        logical_date = get_current_context()["logical_date"]
+        logger.debug(f"Getting logical date string | Logical date={logical_date}")
         return logical_date.replace(tzinfo=None).strftime("%Y-%m-%d")
 
     @task()

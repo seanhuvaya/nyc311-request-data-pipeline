@@ -23,7 +23,7 @@ def make_s3_client():
 
 
 def load_metadata_from_s3(s3_client, s3_save_key: str) -> datetime | None:
-    key = f"{s3_save_key}/metadata.json"
+    key = f"{settings.s3_bucket_name}/metadata.json"
     try:
         response = s3_client.get_object(Bucket=settings.s3_bucket_name, Key=key)
         metadata = json.loads(response["Body"].read().decode("utf-8"))

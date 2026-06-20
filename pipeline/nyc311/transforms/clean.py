@@ -51,7 +51,7 @@ def _fill_from_group(df: pd.DataFrame, col: str, group_cols: list[str]) -> pd.Se
         .rename(columns={col: "_fill"})
     )
     filled = df[valid_cols].merge(lookup, on=valid_cols, how="left")["_fill"]
-    return df[col].fillna(filled.values)
+    return df[col].fillna(filled.set_axis(df.index))
 
 
 def _impute_categorical_fields(df: pd.DataFrame) -> pd.DataFrame:
