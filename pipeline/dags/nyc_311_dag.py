@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 import pendulum
 from airflow.sdk import dag, get_current_context, task
-from shared.tasks import transform_and_load
+from shared.tasks import transform, load
 from nyc311.utils.log import setup_logging
 
 setup_logging(log_level=logging.DEBUG)
@@ -33,7 +33,8 @@ def nyc_311_daily_ingest():
 
     date_str = get_date_str()
     ingest_result = ingest(date_str=date_str)
-    transform_and_load(ingest_result)
+    silver_key = transform(ingest_result)
+    load(silver_key)
 
 
 @dag(
@@ -60,11 +61,12 @@ def nyc_311_backfill():
 
     date_str = get_date_str()
     ingest_result = ingest(date_str=date_str)
-    transform_and_load.override(
+    silver_key = transform(ingest_result)
+    load.override(
         retries=3,
         retry_delay=timedelta(minutes=1),
         retry_exponential_backoff=True,
-    )(ingest_result)
+    )(silver_key)
 
 
 nyc_311_daily_ingest()
