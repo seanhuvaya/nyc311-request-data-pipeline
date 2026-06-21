@@ -78,14 +78,20 @@ def load(silver_key: str) -> int:
 
 
 def _norm_str(val, default: str = "") -> str:
-    if val is None or (isinstance(val, float) and pd.isna(val)):
-        return default
+    try:
+        if pd.isna(val):
+            return default
+    except TypeError:
+        pass
     return str(val)
 
 
 def _norm_int(val, default: int = -1) -> int:
-    if val is None or (isinstance(val, float) and pd.isna(val)):
-        return default
+    try:
+        if pd.isna(val):
+            return default
+    except TypeError:
+        pass
     return int(val)
 
 
@@ -117,7 +123,7 @@ def _upsert_dim_date(df: pd.DataFrame, conn) -> dict:
     )
     result = conn.execute(
         text("SELECT date_id, full_date FROM gold.dim_date WHERE full_date = ANY(:dates)"),
-        {"dates": [str(d) for d in dates]},
+        {"dates": list(dates)},
     )
     return {row.full_date: row.date_id for row in result}
 
