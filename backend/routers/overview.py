@@ -5,19 +5,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from dependencies import get_db_session
 from schema.day_of_week import DayOfWeekStat
-from schema.overview import SummaryStatsResponse
+from schema.overview import DailyMetricResponse, WeeklySummaryResponse
 from services import day_of_week_service
 from services.overview_service import get_requests_30d_summary, get_requests_7d_summary
 
 router = APIRouter(prefix="/overview", tags=["Overview"])
 
 
-@router.get("/30-day-summary", response_model=SummaryStatsResponse)
+@router.get("/30-day-summary", response_model=List[DailyMetricResponse])
 async def get_30d_summary(db: AsyncSession = Depends(get_db_session)):
     return await get_requests_30d_summary(db)
 
 
-@router.get("/weekly-summary", response_model=SummaryStatsResponse)
+@router.get("/weekly-summary", response_model=WeeklySummaryResponse)
 async def get_7d_summary(db: AsyncSession = Depends(get_db_session)):
     return await get_requests_7d_summary(db)
 

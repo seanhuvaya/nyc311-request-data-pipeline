@@ -176,10 +176,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    # No host port published: Nginx Proxy Manager reaches this container
-    # via the shared `proxy` network at nyc311-backend-api:8000.
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
     networks:
       - default
     environment:
@@ -200,12 +198,11 @@ services:
       dockerfile: Dockerfile
       args:
         # VITE_* vars are baked at build time, not read at runtime.
-        VITE_API_URL: ${VITE_API_URL:-https://api.nyc311.seanhuvaya.dev}
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
     container_name: nyc311-frontend
     restart: unless-stopped
-    # No host port published: NPM reaches this container at nyc311-frontend:80.
-    expose:
-      - "80"
+    ports:
+      - "5173:80"
     networks:
       - default
 

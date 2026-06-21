@@ -1,13 +1,28 @@
+from datetime import date
 from typing import Optional
 
 from pydantic import BaseModel
 
 
-class SummaryStatsResponse(BaseModel):
+class DailyMetricResponse(BaseModel):
+    request_date: date
     total_count: int
     closed_count: int
     open_count: int
-    pct_closed: float
-    avg_resolution_hours: Optional[float]
-    median_resolution_hours: Optional[float]
-    p90_resolution_hours: Optional[float]
+    pct_closure_daily: Optional[float]
+    avg_resolution_time_in_hours: Optional[float]
+    median_resolution_time_in_hours: Optional[float]
+
+
+class WeeklySummaryResponse(BaseModel):
+    week_start: Optional[date]
+    week_total_requests: int
+    week_closed_requests: int
+    week_closed_requests_pct: Optional[float]
+    week_avg_resolution_time_in_hours: Optional[float]
+    prev_week_total_requests: int
+    prev_week_total_closed_requests: int
+    prev_week_change_in_requests_pct: Optional[float]
+    prev_week_change_in_closed_requests_pct: Optional[float]
+    prev_week_avg_resolution_time_in_hours: Optional[float]
+    prev_week_avg_resolution_time_in_hours_pct: Optional[float]
