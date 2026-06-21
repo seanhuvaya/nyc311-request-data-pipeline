@@ -1,4 +1,4 @@
-import { LayoutDashboard, Phone } from "lucide-react"
+import { Building2, Clock, LayoutDashboard, Map, MessageSquareWarning, Phone } from "lucide-react"
 import {
     Sidebar,
     SidebarContent,
@@ -21,13 +21,11 @@ const NAV_ITEMS: {
     icon: React.ComponentType<{ className?: string }>
     badge?: string
 }[] = [
-    {id: "overview", label: "Executive Overview", icon: LayoutDashboard},
-    // {id: "agency", label: "Agency Performance", icon: Building2},
-    // {id: "complaints", label: "Complaint Trends", icon: TrendingUp},
-    // {id: "geo", label: "Geographic View", icon: MapPin},
-    // {id: "backlog", label: "Backlog & Operations", icon: Layers, badge: "Live"},
-    // {id: "sla", label: "SLA Performance", icon: Gauge},
-    // {id: "borough-heatmap", label: "Borough Heatmap", icon: Grid3x3},
+    { id: "overview", label: "Executive Overview", icon: LayoutDashboard },
+    { id: "agency", label: "Agency Performance", icon: Building2 },
+    { id: "complaints", label: "Complaint Trends", icon: MessageSquareWarning },
+    { id: "backlog", label: "Backlog & Operations", icon: Clock },
+    { id: "borough-heatmap", label: "Borough Breakdown", icon: Map },
 ]
 
 interface AppSidebarProps {

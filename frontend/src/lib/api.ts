@@ -1,4 +1,12 @@
-import type { DailyMetric, WeeklySummary } from "@/types"
+import type {
+  AgencyStat,
+  BacklogAging,
+  BoroughStat,
+  ComplaintTypeStat,
+  DailyMetric,
+  DayOfWeekStat,
+  WeeklySummary,
+} from "@/types"
 
 /**
  * Base URL of the backend API.
@@ -40,6 +48,26 @@ export function getDailySummary(): Promise<DailyMetric[]> {
 
 export function getWeeklySummary(): Promise<WeeklySummary> {
   return getJson<WeeklySummary>("/api/v1/overview/weekly-summary")
+}
+
+export function getBoroughSummary(): Promise<BoroughStat[]> {
+  return getJson<BoroughStat[]>("/api/v1/borough/summary")
+}
+
+export function getComplaintsSummary(): Promise<ComplaintTypeStat[]> {
+  return getJson<ComplaintTypeStat[]>("/api/v1/complaints/summary")
+}
+
+export function getAgencyPerformance(): Promise<AgencyStat[]> {
+  return getJson<AgencyStat[]>("/api/v1/agency/performance")
+}
+
+export function getDayOfWeekStats(): Promise<DayOfWeekStat[]> {
+  return getJson<DayOfWeekStat[]>("/api/v1/overview/day-of-week")
+}
+
+export function getBacklogAging(): Promise<BacklogAging> {
+  return getJson<BacklogAging>("/api/v1/backlog/aging")
 }
 
 export { ApiError }

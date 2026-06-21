@@ -1,4 +1,8 @@
 import { AppSidebar } from "@/components/layout/AppSidebar"
+import { AgencyPage } from "@/components/dashboard/AgencyPage"
+import { BacklogPage } from "@/components/dashboard/BacklogPage"
+import { BoroughPage } from "@/components/dashboard/BoroughPage"
+import { ComplaintsPage } from "@/components/dashboard/ComplaintsPage"
 import { OverviewDashboard } from "@/components/dashboard/OverviewDashboard"
 import type { NavPage } from "@/types"
 import { useState } from "react"
@@ -53,6 +57,10 @@ export function App() {
 
         <main className="flex-1 overflow-y-auto p-6">
           {currentPage === "overview" && <OverviewDashboard />}
+          {currentPage === "agency" && <AgencyPage />}
+          {currentPage === "complaints" && <ComplaintsPage />}
+          {currentPage === "backlog" && <BacklogPage />}
+          {currentPage === "borough-heatmap" && <BoroughPage />}
         </main>
       </SidebarInset>
     </SidebarProvider>

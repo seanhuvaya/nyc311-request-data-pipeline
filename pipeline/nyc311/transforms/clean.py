@@ -56,8 +56,10 @@ def _fill_from_group(df: pd.DataFrame, col: str, group_cols: list[str]) -> pd.Se
 
 def _impute_categorical_fields(df: pd.DataFrame) -> pd.DataFrame:
     logger.info("Imputing categorical fields")
+    zip_null_before = df["incident_zip"].isna()
     df["incident_zip"] = _fill_from_group(df, "incident_zip", ["latitude", "longitude"])
     df["incident_zip"] = _fill_from_group(df, "incident_zip", ["borough"])
+    df["_incident_zip_imputed"] = zip_null_before & df["incident_zip"].notna()
 
     df["address_type"] = _fill_from_group(df, "address_type", ["complaint_type"])
     df["address_type"] = _fill_from_group(df, "address_type", ["agency"])
