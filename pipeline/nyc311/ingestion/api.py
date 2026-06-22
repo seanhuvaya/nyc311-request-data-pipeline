@@ -57,9 +57,10 @@ def extract_nyc311_requests_since(
         dates_df["resolution_action_updated_date"] = pd.to_datetime(dates_df["resolution_action_updated_date"])
 
         
+        now = datetime.now()
         effective_watermarks = dates_df["resolution_action_updated_date"].fillna(dates_df["created_date"])
         chunk_latest_watermark = effective_watermarks.max().to_pydatetime().replace(tzinfo=None)
-        watermark = max(watermark, chunk_latest_watermark)
+        watermark = max(watermark, min(chunk_latest_watermark, now))
 
         logger.debug(f"Chunk loaded | rows={len(dates_df)}, chunk_latest_watermark={chunk_latest_watermark}, watermark={watermark}")
 
