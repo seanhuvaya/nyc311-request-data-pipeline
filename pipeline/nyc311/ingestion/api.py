@@ -94,7 +94,7 @@ def _save_metadata(s3_client, watermark: datetime, records_fetched: int) -> None
         "total_records_fetched": records_fetched,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
-    key = "extraction_metadata.json"
+    key = "metadata.json"
     s3_client.put_object(
         Body=json.dumps(metadata).encode(),
         Bucket=settings.s3_bucket_name,
